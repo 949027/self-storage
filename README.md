@@ -2,9 +2,11 @@
 
 Телеграм-бот на основе python-telegram-bot и Django.
 
-Файл скрипта бота находится в папке: \self-storage\tga\ugc\management\commands 
+Файл скрипта бота находится в папке: \self-storage\tga\ugc\management\commands
 
 Создать файл .env в корне каталога с проектом и прописать TG_TOKEN = 'токен бота'
+
+Не забудьте создать виртуальное окружение и в нем: pip install -r requirements.txt
 
 До запуска бота:
 python manage.py makemigrations
