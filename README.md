@@ -8,7 +8,7 @@
 
 Не забудьте создать виртуальное окружение и в нем:
 ```sh
-pip install -r requirements.txt"
+pip install -r requirements.txt
 ```
 
 До запуска бота:
