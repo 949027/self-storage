@@ -154,6 +154,11 @@ class Orders(models.Model):
         verbose_name="Заказчик",
         on_delete=models.PROTECT,
     )
+    warehouse = models.ForeignKey(
+        to="ugc.Warehouses",
+        verbose_name="Склад",
+        on_delete=models.PROTECT,
+    )
     seasonal_item = models.ForeignKey(
         to="ugc.SeasonalItems",
         blank=True,
