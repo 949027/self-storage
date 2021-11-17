@@ -6,8 +6,11 @@ from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from telegram import Bot
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, \
-    ReplyKeyboardMarkup
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+)
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -19,9 +22,7 @@ from telegram.ext import (
 from telegram.utils.request import Request
 
 
-from ugc.models import (
-    Warehouses
-)
+from ugc.models import Warehouses
 
 env = Env()
 env.read_env()
@@ -34,40 +35,43 @@ bot = Bot(
     base_url=getattr(settings, "PROXY_URL", None),
 )
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
 
 WAREHOISES, CHOICE = range(2)
 
-choice_buttons = ['Сезонные вещи', 'Другое']
+choice_buttons = ["Сезонные вещи", "Другое"]
 
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
-        yield buttons[button: button + chunks_number]
+        yield buttons[button : button + chunks_number]
 
 
 def keyboard_maker(buttons, number):
     keyboard = list(chunks_generators(buttons, number))
-    markup = ReplyKeyboardMarkup(keyboard,
-                                 resize_keyboard=True,
-                                 one_time_keyboard=True)
+    markup = ReplyKeyboardMarkup(
+        keyboard, resize_keyboard=True, one_time_keyboard=True
+    )
     return markup
 
 
 def start(update, context):
     user = update.message.from_user
-    text = f'''
-Привет, {user.first_name}!
-Я помогу вам арендовать личную ячейку для хранения вещей. 
-Давайте посмотрим адреса складов, чтобы выбрать ближайший!
-'''
+    text = f"""Привет, {user.first_name}!
+           Я помогу вам арендовать личную ячейку для хранения вещей.
+           Давайте посмотрим адреса складов, чтобы выбрать ближайший!"""
 
-    photo_id = 'AgACAgQAAxkBAAIBMWGUIFP-VyC78fu_jw_Di7gPHcgUAALitzEbG4OgUE4AAaQx910LxQEAAwIAA20AAyIE'
-    caption = 'Аренда ячеек в <b>Self Storage</b>'
-    bot.send_photo(chat_id=update.message.chat_id,
-                   photo=photo_id, caption=caption, parse_mode='HTML')
+    photo_id = "AgACAgQAAxkBAAIBMWGUIFP-VyC78fu_jw_Di7gPHcgUAALitzEbG4OgUE4AAaQx910LxQEAAwIAA20AAyIE"
+    caption = "Аренда ячеек в <b>Self Storage</b>"
+    bot.send_photo(
+        chat_id=update.message.chat_id,
+        photo=photo_id,
+        caption=caption,
+        parse_mode="HTML",
+    )
     update.message.reply_text(text)
     time.sleep(1)
     warehouses = Warehouses.objects.all()
@@ -75,36 +79,40 @@ def start(update, context):
     for warehouse in warehouses:
         warehouse_buttons.append(warehouse.name)
     warehouse_markup = keyboard_maker(warehouse_buttons, 2)
-    second_text = f'''
+    second_text = f"""
 В Москве 4 склада:
 <b>Крыло</b> - ул. Крыленко, 3Б ( м. Улица Дыбенко )
 <b>Пирог</b> - Пироговская наб., 15 ( м. Площадь Ленина )
 <b>Комендант</b> - пр.Сизова, 2А ( м. Комендантский проспект )
 <b>Звезда</b> - Московское шоссе, 25 ( м. Звездная )
-'''
-    update.message.reply_text(second_text, reply_markup=warehouse_markup,
-                              parse_mode='HTML')
+"""
+    update.message.reply_text(
+        second_text, reply_markup=warehouse_markup, parse_mode="HTML"
+    )
     return WAREHOISES
 
 
 def warehouses(update, context):
     user_message = update.message.text
-    context.user_data['warehouse'] = user_message
+    context.user_data["warehouse"] = user_message
     choice_markup = keyboard_maker(choice_buttons, 2)
-    update.message.reply_text('Что хотите хранить?', reply_markup=choice_markup)
+    update.message.reply_text(
+        "Что хотите хранить?", reply_markup=choice_markup
+    )
     return CHOICE
 
 
 def choice(update, context):
     user_message = update.message.text
-    if user_message == 'Сезонные вещи':
+    if user_message == "Сезонные вещи":
         pass
-    elif user_message == 'Другое':
+    elif user_message == "Другое":
         pass
     else:
         choice_markup = keyboard_maker(choice_buttons, 2)
-        update.message.reply_text('Что хотите хранить?',
-                                  reply_markup=choice_markup)
+        update.message.reply_text(
+            "Что хотите хранить?", reply_markup=choice_markup
+        )
 
 
 def log_errors(f):
@@ -119,7 +127,7 @@ def log_errors(f):
     return inner
 
 
-#@log_errors
+# @log_errors
 def end(update, context):
     bot = context.bot
     bot.send_message(
@@ -133,22 +141,20 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-
         updater = Updater(bot=bot, use_context=True)
 
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler("start", start)],
-
             states={
-
-                WAREHOISES: [CommandHandler('start', start),
-                       MessageHandler(Filters.text, warehouses)],
-
-                CHOICE: [CommandHandler('start', start),
-                        MessageHandler(Filters.text, choice)],
-
+                WAREHOISES: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, warehouses),
+                ],
+                CHOICE: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, choice),
+                ],
             },
-
             fallbacks=[CommandHandler("end", end)],
         )
 
