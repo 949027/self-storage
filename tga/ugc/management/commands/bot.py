@@ -79,13 +79,11 @@ def start(update, context):
     for warehouse in warehouses:
         warehouse_buttons.append(warehouse.name)
     warehouse_markup = keyboard_maker(warehouse_buttons, 2)
-    second_text = f"""
-В Москве 4 склада:
-<b>Крыло</b> - ул. Крыленко, 3Б ( м. Улица Дыбенко )
-<b>Пирог</b> - Пироговская наб., 15 ( м. Площадь Ленина )
-<b>Комендант</b> - пр.Сизова, 2А ( м. Комендантский проспект )
-<b>Звезда</b> - Московское шоссе, 25 ( м. Звездная )
-"""
+    second_text = f"""В Москве 4 склада:
+                  <b>Крыло</b> - ул. Крыленко, 3Б ( м. Улица Дыбенко )
+                  <b>Пирог</b> - Пироговская наб., 15 ( м. Площадь Ленина )
+                  <b>Комендант</b> - пр.Сизова, 2А ( м. Комендантский проспект )
+                  <b>Звезда</b> - Московское шоссе, 25 ( м. Звездная )"""
     update.message.reply_text(
         second_text, reply_markup=warehouse_markup, parse_mode="HTML"
     )
