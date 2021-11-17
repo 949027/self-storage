@@ -22,7 +22,7 @@ from telegram.ext import (
 from telegram.utils.request import Request
 
 
-from ugc.models import Warehouses
+from ugc.models import Warehouses, SeasonalItems
 
 env = Env()
 env.read_env()
@@ -40,7 +40,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WAREHOISES, CHOICE, ANOTHER, PERIOD, ORDER = range(5)
+WAREHOISES, CHOICE, ANOTHER, PERIOD, ORDER, SEASON, AMOUNT = range(7)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
@@ -63,12 +63,10 @@ def start(update, context):
     text = f"""Привет, {user.first_name}!
            Я помогу вам арендовать личную ячейку для хранения вещей.
            Давайте посмотрим адреса складов, чтобы выбрать ближайший!"""
-
-    photo_id = "AgACAgQAAxkBAAIBMWGUIFP-VyC78fu_jw_Di7gPHcgUAALitzEbG4OgUE4AAaQx910LxQEAAwIAA20AAyIE"
     caption = "Аренда ячеек в <b>Self Storage</b>"
     bot.send_photo(
         chat_id=update.message.chat_id,
-        photo=photo_id,
+        photo='https://pilot196.ru/upload/iblock/c9f/tovar_sklad_2.jpg',
         caption=caption,
         parse_mode="HTML",
     )
@@ -105,13 +103,21 @@ def warehouses(update, context):
 def choice(update, context):
     user_message = update.message.text
     if user_message == "Сезонные вещи":
-        pass
+        things = SeasonalItems.objects.all()
+        things_buttons = []
+        for thing in things:
+            things_buttons.append(thing.item_name)
+        things_markup = keyboard_maker(things_buttons, 2)
+        update.message.reply_text("Выберете вещи.",
+                                  reply_markup=things_markup)
+        return SEASON
     elif user_message == "Другое":
         another_buttons = list(range(1, 11))
         another_markup = keyboard_maker(another_buttons, 5)
         update.message.reply_text("Выберите габариты ячейки")
-        text = "599 руб - первый 1 кв.м., далее +150 руб за каждый кв. метр в месяц"
-        update.message.reply_text(text)
+        update.message.reply_text(
+            "599 руб - первый 1 кв.м., далее +150 руб за каждый кв. метр в месяц"
+        )
         update.message.reply_text("Сколько кв. метров вам нужно?",
                                   reply_markup=another_markup)
         return ANOTHER
@@ -120,6 +126,25 @@ def choice(update, context):
         update.message.reply_text(
             "Что хотите хранить?", reply_markup=choice_markup
         )
+
+
+def season(update, context):
+    user_message = update.message.text
+    context.user_data["seasonal_item"] = user_message
+    amount_buttons = list(range(1, 6))
+    amount_markup = keyboard_maker(amount_buttons, 5)
+    update.message.reply_text(
+        "Выберите или введите кол-во.", reply_markup=amount_markup)
+    return AMOUNT
+
+
+def amount(update, context):
+    user_message = update.message.text
+    context.user_data["amount"] = user_message
+    amount_buttons = list(range(1, 6))
+    amount_markup = keyboard_maker(amount_buttons, 5)
+    update.message.reply_text(
+        "Ещё не готово.", reply_markup=amount_markup)
 
 
 def another(update, context):
@@ -217,6 +242,14 @@ class Command(BaseCommand):
                 ORDER: [
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, order),
+                ],
+                SEASON: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, season),
+                ],
+                AMOUNT: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, amount),
                 ],
             },
             fallbacks=[CommandHandler("end", end)],
