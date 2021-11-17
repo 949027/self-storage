@@ -117,7 +117,7 @@ class SeasonalItemsPrice(models.Model):
     )
 
     def __str__(self):
-        return self.item_name
+        return "стоимость"
 
     class Meta:
         verbose_name = "Стоимость хранения сезонной вещи"
@@ -137,7 +137,7 @@ class AnotherItemsPrice(models.Model):
     )
 
     def __str__(self):
-        return self.item_name
+        return "стоимость"
 
     class Meta:
         verbose_name = "Стоимость хранения другого"
