@@ -70,6 +70,7 @@ class BerriesAdmin(admin.ModelAdmin):
 class OrdersAdmin(admin.ModelAdmin):
     list_display = (
         "customer",
+        "warehouse",
         "seasonal_item",
         "thing_type",
         "cell_size",
