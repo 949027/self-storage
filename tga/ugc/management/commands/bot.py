@@ -8,7 +8,7 @@ import phonenumbers
 # from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
+# from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 from telegram import Bot
 from telegram import (
     ReplyKeyboardMarkup,
@@ -23,8 +23,7 @@ from telegram.ext import (
 )
 from telegram.utils.request import Request
 
-
-from ugc.models import Warehouses, SeasonalItems, Customers
+from ugc.models import Warehouses, SeasonalItems, Customers, SeasonalItemsPrice
 
 env = Env()
 env.read_env()
@@ -50,6 +49,7 @@ logger = logging.getLogger(__name__)
     ORDER,
     SEASON,
     AMOUNT,
+    CHOICE_PERIOD,
     CHECK_USER,
     USER_LAST_NAME,
     USER_PHONE_NUMBER,
@@ -57,14 +57,14 @@ logger = logging.getLogger(__name__)
     USER_BIRTHDAY,
     SAVE_USER,
     MAKE_PAYMENT,
-) = range(14)
+) = range(15)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
-        yield buttons[button : button + chunks_number]
+        yield buttons[button: button + chunks_number]
 
 
 def keyboard_maker(buttons, number):
@@ -100,17 +100,15 @@ def start(update, context):
         parse_mode="HTML",
     )
     update.message.reply_text(text)
-    time.sleep(1)
+    # time.sleep(1)
     warehouses = Warehouses.objects.all()
     warehouse_buttons = []
+    menu_text = ""
     for warehouse in warehouses:
         warehouse_buttons.append(warehouse.name)
+        warehouse_card = Warehouses.objects.get(name=warehouse.name)
+        menu_text += f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
     warehouse_markup = keyboard_maker(warehouse_buttons, 2)
-    menu_text = f"""В Москве 4 склада:
-                  <b>Крыло</b> - ул. Крыленко, 3Б ( м. Улица Дыбенко )
-                  <b>Пирог</b> - Пироговская наб., 15 ( м. Площадь Ленина )
-                  <b>Комендант</b> - пр.Сизова, 2А ( м. Комендантский проспект )
-                  <b>Звезда</b> - Московское шоссе, 25 ( м. Звездная )"""
     context.user_data["menu_text"] = menu_text
     context.user_data["warehouse_markup"] = warehouse_markup
     update.message.reply_text(
@@ -142,9 +140,9 @@ def choice(update, context):
         update.message.reply_text(
             """
         Стоимость хранения:
-        1 лыжи - 100 р/неделя
-        1 сноуборд - 100 р/неделя
-        1 велосипед - 150 р/ неделя
+        1 лыжи - 100 р/неделя или 300 р/мес
+        1 сноуборд - 100 р/неделя или 300 р/мес
+        1 велосипед - 150 р/ неделя или 400 р/мес
         4 колеса - 200 р/мес"""
         )
         update.message.reply_text("Выберете вещи.", reply_markup=things_markup)
@@ -187,19 +185,38 @@ def amount(update, context):
     print(f"{thing}")
     context.user_data["amount"] = user_message
     if thing in things[:-1]:
-        context.user_data["period_extension"] = "нед."
-        period_buttons = list(map(str, list(range(1, 5))))
+        period_buttons = ["Недели", "Месяцы"]
         period_markup = keyboard_maker(period_buttons, 5)
-        update.message.reply_text("Максимальный срок хранения 4 недели.")
+        update.message.reply_text("Максимальный срок хранения 6 месяцев.")
         update.message.reply_text(
-            "Укажите сколько недель вам нужно.", reply_markup=period_markup
+            "Выберите срок хранения, недели или месяцы.", reply_markup=period_markup
         )
-        return PERIOD
+        return CHOICE_PERIOD
     elif thing == "колеса":
         context.user_data["period_extension"] = "мес."
         period_buttons = list(map(str, list(range(1, 7))))
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text("Максимальный срок хранения 6 месяцев.")
+        update.message.reply_text(
+            "Укажите сколько месяцев вам нужно.", reply_markup=period_markup
+        )
+        return PERIOD
+
+
+def choice_period(update, context):
+    user_message = update.message.text
+    if user_message == "Недели":
+        context.user_data["period_extension"] = "нед."
+        period_buttons = list(map(str, list(range(1, 4))))
+        period_markup = keyboard_maker(period_buttons, 3)
+        update.message.reply_text(
+            "Укажите сколько недель вам нужно.", reply_markup=period_markup
+        )
+        return PERIOD
+    elif user_message == "Месяцы":
+        context.user_data["period_extension"] = "мес."
+        period_buttons = list(map(str, list(range(1, 7))))
+        period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text(
             "Укажите сколько месяцев вам нужно.", reply_markup=period_markup
         )
@@ -407,7 +424,6 @@ class Command(BaseCommand):
     help = "Телеграм-бот"
 
     def handle(self, *args, **options):
-
         # updater = Updater(bot=bot, use_context=True)
         updater = Updater(TG_TOKEN, use_context=True)
 
@@ -441,6 +457,10 @@ class Command(BaseCommand):
                 AMOUNT: [
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, amount),
+                ],
+                CHOICE_PERIOD: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, choice_period),
                 ],
                 CHECK_USER: [
                     CommandHandler("start", start),
