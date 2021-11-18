@@ -8,6 +8,7 @@ import phonenumbers
 # from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 from telegram import Bot
 from telegram import (
     ReplyKeyboardMarkup,
@@ -356,8 +357,10 @@ def check_user_birthdate(update, context):
     message_text = f"Вы ввели паспортные данные: {user_message}"
     update.message.reply_text(message_text)
 
+    # calendar, step = DetailedTelegramCalendar().build()
     update.message.reply_text(
         "Введите Вашу дату рождения в формате гггг-мм-дд:",
+        # reply_markup=calendar,
         parse_mode="HTML",
     )
     return SAVE_USER
