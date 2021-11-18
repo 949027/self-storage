@@ -44,7 +44,7 @@ class Customers(models.Model):
         verbose_name="Фамилия заказчика",
     )
     passport_id = models.CharField(
-        max_length=11,
+        max_length=12,
         verbose_name="Паспортные данные заказчика",
     )
     birthday = models.DateField(
