@@ -102,12 +102,20 @@ def warehouses(update, context):
 
 def choice(update, context):
     user_message = update.message.text
+    context.user_data["choice"] = user_message
     if user_message == "Сезонные вещи":
         things = SeasonalItems.objects.all()
         things_buttons = []
         for thing in things:
             things_buttons.append(thing.item_name)
+        context.user_data["things_buttons"] = things_buttons
         things_markup = keyboard_maker(things_buttons, 2)
+        update.message.reply_text("""
+        Стоимость хранения:
+        1 лыжи - 100 р/неделя
+        1 сноуборд - 100 р/неделя
+        1 велосипед - 150 р/ неделя
+        4 колеса - 200 р/мес""")
         update.message.reply_text("Выберете вещи.", reply_markup=things_markup)
         return SEASON
     elif user_message == "Другое":
@@ -142,14 +150,35 @@ def season(update, context):
 def amount(update, context):
     user_message = update.message.text
     context.user_data["amount"] = user_message
-    amount_buttons = list(range(1, 6))
-    amount_markup = keyboard_maker(amount_buttons, 5)
-    update.message.reply_text("Ещё не готово.", reply_markup=amount_markup)
+    things = context.user_data.get("things_buttons")
+    thing = context.user_data.get("seasonal_item")
+    print(f"sss{things[:-1]}")
+    print(f"{thing}")
+    context.user_data["amount"] = user_message
+    if thing in things[:-1]:
+        context.user_data["period_extension"] = "нед."
+        period_buttons = list(range(1, 5))
+        period_markup = keyboard_maker(period_buttons, 5)
+        update.message.reply_text(
+            "Максимальный срок хранения 4 недели.")
+        update.message.reply_text(
+            "Укажите сколько недель вам нужно.", reply_markup=period_markup)
+        return PERIOD
+    elif thing == "колеса":
+        context.user_data["period_extension"] = "мес."
+        period_buttons = list(range(1, 7))
+        period_markup = keyboard_maker(period_buttons, 3)
+        update.message.reply_text(
+            "Максимальный срок хранения 6 месяцев.")
+        update.message.reply_text(
+            "Укажите сколько месяцев вам нужно.", reply_markup=period_markup)
+        return PERIOD
 
 
 def another(update, context):
     user_message = update.message.text
     context.user_data["square_meters"] = user_message
+    context.user_data["period_extension"] = "мес."
     another_buttons = list(range(1, 13))
     another_markup = keyboard_maker(another_buttons, 4)
     text = "Мы можем хранить можем сдать ячейку до 12 месяцев"
@@ -162,16 +191,28 @@ def another(update, context):
 
 def period(update, context):
     user_message = update.message.text
-    context.user_data["period"] = user_message
     period_buttons = ["Забронировать", "Назад"]
     period_markup = keyboard_maker(period_buttons, 1)
-    square_meters = context.user_data.get("square_meters")
+    choice = context.user_data.get("choice")
     warehouse = context.user_data.get("warehouse")
-    text = f"""Ваш заказ:
-           Склад: {warehouse}
-           Ячейка: {square_meters} кв. м
-           Период: {user_message} месяц(ев)
-           Цена: пока считаем)"""
+    if choice == "Другое":
+        square_meters = context.user_data.get("square_meters")
+        period_extension = context.user_data.get("period_extension")
+        text = f"""Ваш заказ:
+               Склад: {warehouse}
+               Ячейка: {square_meters} кв. м
+               Период: {user_message} {period_extension}
+               Цена: пока считаем)"""
+    elif choice == "Сезонные вещи":
+        seasonal_item = context.user_data.get("seasonal_item")
+        period_extension = context.user_data.get("period_extension")
+        amount = context.user_data.get("amount")
+        text = f"""Ваш заказ:
+                Склад: {warehouse}
+                Вещь: {seasonal_item}
+                Количество: {amount} шт.
+                Период: {user_message} {period_extension}
+                Цена: пока считаем)"""
     update.message.reply_text(text, reply_markup=period_markup)
     return ORDER
 
