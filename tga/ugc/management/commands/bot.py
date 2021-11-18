@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
     USER_PASSPORT_ID,
     USER_BIRTHDAY,
     SAVE_USER,
-    PAYMENT,
+    MAKE_PAYMENT,
 ) = range(14)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
@@ -167,7 +167,7 @@ def choice(update, context):
 def season(update, context):
     user_message = update.message.text
     context.user_data["seasonal_item"] = user_message
-    amount_buttons = list(range(1, 6))
+    amount_buttons = list(map(str, list(range(1, 6))))
     amount_markup = keyboard_maker(amount_buttons, 5)
     update.message.reply_text(
         "Выберите или введите кол-во.", reply_markup=amount_markup
@@ -185,7 +185,7 @@ def amount(update, context):
     context.user_data["amount"] = user_message
     if thing in things[:-1]:
         context.user_data["period_extension"] = "нед."
-        period_buttons = list(range(1, 5))
+        period_buttons = list(map(str, list(range(1, 5))))
         period_markup = keyboard_maker(period_buttons, 5)
         update.message.reply_text("Максимальный срок хранения 4 недели.")
         update.message.reply_text(
@@ -194,7 +194,7 @@ def amount(update, context):
         return PERIOD
     elif thing == "колеса":
         context.user_data["period_extension"] = "мес."
-        period_buttons = list(range(1, 7))
+        period_buttons = list(map(str, list(range(1, 7))))
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text("Максимальный срок хранения 6 месяцев.")
         update.message.reply_text(
@@ -207,7 +207,7 @@ def another(update, context):
     user_message = update.message.text
     context.user_data["square_meters"] = user_message
     context.user_data["period_extension"] = "мес."
-    another_buttons = list(range(1, 13))
+    another_buttons = list(map(str, list(range(1, 13))))
     another_markup = keyboard_maker(another_buttons, 4)
     text = "Мы можем хранить можем сдать ячейку до 12 месяцев"
     update.message.reply_text(text)
@@ -257,8 +257,6 @@ def order(update, context):
             menu_text, reply_markup=warehouse_markup, parse_mode="HTML"
         )
         return WAREHOISES
-    else:
-        pass
 
 
 def check_register_user(update, context):
@@ -366,15 +364,15 @@ def save_user_attributes(update, context):
         "Ваши данные сохранены в базе",
         parse_mode="HTML",
     )
-    return PAYMENT
+    return MAKE_PAYMENT
 
 
-def payment(update, context):
+def make_payment(update, context):
     update.message.reply_text(
         "Приступим к платежам",
         parse_mode="HTML",
     )
-    return PAYMENT
+    return MAKE_PAYMENT
 
 
 def end(update, context):
@@ -448,9 +446,9 @@ class Command(BaseCommand):
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, save_user_attributes),
                 ],
-                PAYMENT: [
+                MAKE_PAYMENT: [
                     CommandHandler("start", start),
-                    MessageHandler(Filters.text, payment),
+                    MessageHandler(Filters.text, make_payment),
                 ],
             },
             fallbacks=[CommandHandler("end", end)],
