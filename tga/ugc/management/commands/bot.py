@@ -3,6 +3,8 @@ import time
 import logging
 from environs import Env
 
+import phonenumbers
+
 # from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -332,12 +334,20 @@ def check_user_passport_id(update, context):
     context.user_data["phone_number"] = user_message
     message_text = f"Вы ввели номер телефона: {user_message}"
     update.message.reply_text(message_text)
-
-    update.message.reply_text(
-        "Введите Ваш паспорт в формате 11 22 123456:",
-        parse_mode="HTML",
-    )
-    return USER_BIRTHDAY
+    checking_number = phonenumbers.parse(user_message)
+    if phonenumbers.is_valid_number(checking_number):
+        update.message.reply_text(
+            "Введите Ваш паспорт в формате 11 22 123456:",
+            parse_mode="HTML",
+        )
+        return USER_BIRTHDAY
+    else:
+        update.message.reply_text(
+            "Телефон введен неверно! Введите Ваш номер телефона в формате +71231234567:",
+            reply_markup=ReplyKeyboardRemove(),
+            parse_mode="HTML",
+        )
+        return USER_PASSPORT_ID
 
 
 def check_user_birthdate(update, context):
@@ -368,11 +378,13 @@ def save_user_attributes(update, context):
         "Ваши данные сохранены в базе",
         parse_mode="HTML",
     )
+    reg_buttons = ["Далее"]
+    reg_markup = keyboard_maker(reg_buttons, 1)
+    update.message.reply_text("Приступим к платежам!", reply_markup=reg_markup)
     return MAKE_PAYMENT
 
 
 def make_payment(update, context):
-    user_message = update.message.text
     update.message.reply_text(
         "Приступим к платежам",
         parse_mode="HTML",
