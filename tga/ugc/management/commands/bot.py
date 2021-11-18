@@ -167,13 +167,11 @@ def period(update, context):
     period_markup = keyboard_maker(period_buttons, 1)
     square_meters = context.user_data.get("square_meters")
     warehouse = context.user_data.get("warehouse")
-    text = f"""
-Ваш заказ:
-Склад: {warehouse}
-Ячейка: {square_meters} кв. м
-Период: {user_message} месяц(ев)
-Цена: пока считаем)
-"""
+    text = f"""Ваш заказ:
+           Склад: {warehouse}
+           Ячейка: {square_meters} кв. м
+           Период: {user_message} месяц(ев)
+           Цена: пока считаем)"""
     update.message.reply_text(text, reply_markup=period_markup)
     return ORDER
 
