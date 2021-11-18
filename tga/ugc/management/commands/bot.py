@@ -248,7 +248,11 @@ def period(update, context):
 def order(update, context):
     user_message = update.message.text
     if user_message == "Забронировать":
-        update.message.reply_text("Приступим к регистрации!")
+        reg_buttons = ["Далее"]
+        reg_markup = keyboard_maker(reg_buttons, 1)
+        update.message.reply_text(
+            "Приступим к регистрации!", reply_markup=reg_markup
+        )
         return CHECK_USER
     elif user_message == "Назад":
         warehouse_markup = context.user_data.get("warehouse_markup")
@@ -368,6 +372,7 @@ def save_user_attributes(update, context):
 
 
 def make_payment(update, context):
+    user_message = update.message.text
     update.message.reply_text(
         "Приступим к платежам",
         parse_mode="HTML",
