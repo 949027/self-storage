@@ -25,6 +25,8 @@ from telegram.utils.request import Request
 
 from ugc.models import Warehouses, SeasonalItems, Customers, SeasonalItemsPrice
 
+from ugc.management.commands.price import get_meter_price, get_think_price
+
 env = Env()
 env.read_env()
 TG_TOKEN = env.str("TG_TOKEN")
@@ -181,8 +183,6 @@ def amount(update, context):
     context.user_data["amount"] = user_message
     things = context.user_data.get("things_buttons")
     thing = context.user_data.get("seasonal_item")
-    print(f"sss{things[:-1]}")
-    print(f"{thing}")
     context.user_data["amount"] = user_message
     if thing in things[:-1]:
         period_buttons = ["Недели", "Месяцы"]
@@ -239,6 +239,7 @@ def another(update, context):
 
 def period(update, context):
     user_message = update.message.text
+    context.user_data["period"] = user_message
     period_buttons = ["Забронировать", "Назад"]
     period_markup = keyboard_maker(period_buttons, 1)
     choice = context.user_data.get("choice")
@@ -246,21 +247,23 @@ def period(update, context):
     if choice == "Другое":
         square_meters = context.user_data.get("square_meters")
         period_extension = context.user_data.get("period_extension")
+        price = get_meter_price(user_message, square_meters)
         text = f"""Ваш заказ:
                Склад: {warehouse}
                Ячейка: {square_meters} кв. м
                Период: {user_message} {period_extension}
-               Цена: пока считаем)"""
+               Цена: {price} p."""
     elif choice == "Сезонные вещи":
         seasonal_item = context.user_data.get("seasonal_item")
         period_extension = context.user_data.get("period_extension")
         amount = context.user_data.get("amount")
+        price = get_think_price(seasonal_item, period_extension, user_message, amount)
         text = f"""Ваш заказ:
                 Склад: {warehouse}
                 Вещь: {seasonal_item}
                 Количество: {amount} шт.
                 Период: {user_message} {period_extension}
-                Цена: пока считаем)"""
+                Цена: {price} p."""
     update.message.reply_text(text, reply_markup=period_markup)
     return ORDER
 
