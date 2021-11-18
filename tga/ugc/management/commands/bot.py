@@ -66,7 +66,7 @@ def start(update, context):
     caption = "Аренда ячеек в <b>Self Storage</b>"
     bot.send_photo(
         chat_id=update.message.chat_id,
-        photo='https://pilot196.ru/upload/iblock/c9f/tovar_sklad_2.jpg',
+        photo="https://pilot196.ru/upload/iblock/c9f/tovar_sklad_2.jpg",
         caption=caption,
         parse_mode="HTML",
     )
@@ -108,8 +108,7 @@ def choice(update, context):
         for thing in things:
             things_buttons.append(thing.item_name)
         things_markup = keyboard_maker(things_buttons, 2)
-        update.message.reply_text("Выберете вещи.",
-                                  reply_markup=things_markup)
+        update.message.reply_text("Выберете вещи.", reply_markup=things_markup)
         return SEASON
     elif user_message == "Другое":
         another_buttons = list(range(1, 11))
@@ -118,8 +117,9 @@ def choice(update, context):
         update.message.reply_text(
             "599 руб - первый 1 кв.м., далее +150 руб за каждый кв. метр в месяц"
         )
-        update.message.reply_text("Сколько кв. метров вам нужно?",
-                                  reply_markup=another_markup)
+        update.message.reply_text(
+            "Сколько кв. метров вам нужно?", reply_markup=another_markup
+        )
         return ANOTHER
     else:
         choice_markup = keyboard_maker(choice_buttons, 2)
@@ -134,7 +134,8 @@ def season(update, context):
     amount_buttons = list(range(1, 6))
     amount_markup = keyboard_maker(amount_buttons, 5)
     update.message.reply_text(
-        "Выберите или введите кол-во.", reply_markup=amount_markup)
+        "Выберите или введите кол-во.", reply_markup=amount_markup
+    )
     return AMOUNT
 
 
@@ -143,8 +144,7 @@ def amount(update, context):
     context.user_data["amount"] = user_message
     amount_buttons = list(range(1, 6))
     amount_markup = keyboard_maker(amount_buttons, 5)
-    update.message.reply_text(
-        "Ещё не готово.", reply_markup=amount_markup)
+    update.message.reply_text("Ещё не готово.", reply_markup=amount_markup)
 
 
 def another(update, context):
@@ -154,8 +154,9 @@ def another(update, context):
     another_markup = keyboard_maker(another_buttons, 4)
     text = "Мы можем хранить можем сдать ячейку до 12 месяцев"
     update.message.reply_text(text)
-    update.message.reply_text("Сколько месяцев вам нужно?",
-                              reply_markup=another_markup)
+    update.message.reply_text(
+        "Сколько месяцев вам нужно?", reply_markup=another_markup
+    )
     return PERIOD
 
 
@@ -218,7 +219,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        updater = Updater(bot=bot, use_context=True)
+        # updater = Updater(bot=bot, use_context=True)
+        updater = Updater(TG_TOKEN, use_context=True)
 
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler("start", start)],
