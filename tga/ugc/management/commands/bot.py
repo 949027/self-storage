@@ -1,28 +1,27 @@
-import os
+# import os
 import time
 import logging
 from environs import Env
-from datetime import date, timedelta, datetime
+
+# from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from telegram import Bot
 from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
     ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
 )
 from telegram.ext import (
     Updater,
     CommandHandler,
     ConversationHandler,
-    CallbackQueryHandler,
     MessageHandler,
     Filters,
 )
 from telegram.utils.request import Request
 
 
-from ugc.models import Warehouses, SeasonalItems
+from ugc.models import Warehouses, SeasonalItems, Customers
 
 env = Env()
 env.read_env()
@@ -40,7 +39,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WAREHOISES, CHOICE, ANOTHER, PERIOD, ORDER, SEASON, AMOUNT = range(7)
+(
+    WAREHOISES,
+    CHOICE,
+    ANOTHER,
+    PERIOD,
+    ORDER,
+    SEASON,
+    AMOUNT,
+    CHECK_USER,
+    USER_LAST_NAME,
+    USER_PHONE_NUMBER,
+    USER_PASSPORT_ID,
+    USER_BIRTHDAY,
+    SAVE_USER,
+    PAYMENT,
+) = range(14)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
@@ -56,6 +70,18 @@ def keyboard_maker(buttons, number):
         keyboard, resize_keyboard=True, one_time_keyboard=True
     )
     return markup
+
+
+def save_customer(context):
+    customer = Customers(
+        telegram_id=context.user_data["telegram_id"],
+        phone_number=context.user_data["phone_number"],
+        first_name=context.user_data["first_name"],
+        last_name=context.user_data["last_name"],
+        passport_id=context.user_data["passport_id"],
+        birthday=context.user_data["birthday"],
+    )
+    customer.save()
 
 
 def start(update, context):
@@ -110,12 +136,14 @@ def choice(update, context):
             things_buttons.append(thing.item_name)
         context.user_data["things_buttons"] = things_buttons
         things_markup = keyboard_maker(things_buttons, 2)
-        update.message.reply_text("""
+        update.message.reply_text(
+            """
         Стоимость хранения:
         1 лыжи - 100 р/неделя
         1 сноуборд - 100 р/неделя
         1 велосипед - 150 р/ неделя
-        4 колеса - 200 р/мес""")
+        4 колеса - 200 р/мес"""
+        )
         update.message.reply_text("Выберете вещи.", reply_markup=things_markup)
         return SEASON
     elif user_message == "Другое":
@@ -159,19 +187,19 @@ def amount(update, context):
         context.user_data["period_extension"] = "нед."
         period_buttons = list(range(1, 5))
         period_markup = keyboard_maker(period_buttons, 5)
+        update.message.reply_text("Максимальный срок хранения 4 недели.")
         update.message.reply_text(
-            "Максимальный срок хранения 4 недели.")
-        update.message.reply_text(
-            "Укажите сколько недель вам нужно.", reply_markup=period_markup)
+            "Укажите сколько недель вам нужно.", reply_markup=period_markup
+        )
         return PERIOD
     elif thing == "колеса":
         context.user_data["period_extension"] = "мес."
         period_buttons = list(range(1, 7))
         period_markup = keyboard_maker(period_buttons, 3)
+        update.message.reply_text("Максимальный срок хранения 6 месяцев.")
         update.message.reply_text(
-            "Максимальный срок хранения 6 месяцев.")
-        update.message.reply_text(
-            "Укажите сколько месяцев вам нужно.", reply_markup=period_markup)
+            "Укажите сколько месяцев вам нужно.", reply_markup=period_markup
+        )
         return PERIOD
 
 
@@ -220,7 +248,8 @@ def period(update, context):
 def order(update, context):
     user_message = update.message.text
     if user_message == "Забронировать":
-        update.message.reply_text("Ещё не готово")
+        update.message.reply_text("Приступим к регистрации!")
+        return CHECK_USER
     elif user_message == "Назад":
         warehouse_markup = context.user_data.get("warehouse_markup")
         menu_text = context.user_data.get("menu_text")
@@ -232,19 +261,122 @@ def order(update, context):
         pass
 
 
-def log_errors(f):
-    def inner(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            error_message = f"Произошла ошибка: {e}"
-            print(error_message)
-            raise e
+def check_register_user(update, context):
+    global _telegram_id
+    global _user_last_name
 
-    return inner
+    _telegram_id = update.message.chat_id
+    context.user_data["telegram_id"] = _telegram_id
+
+    customer = Customers.objects.filter(telegram_id=_telegram_id)
+    if customer.count() == 0:
+        telegram_user = update.effective_user
+        user_first_name = telegram_user.first_name or ""
+        _user_last_name = telegram_user.last_name or ""
+
+        user_first_name_buttons = [user_first_name]
+        user_first_name_markup = keyboard_maker(user_first_name_buttons, 2)
+        context.user_data["user_first_name_markup"] = user_first_name_markup
+        update.message.reply_text(
+            "Введите Ваше имя или нажмите кнопку ниже:",
+            reply_markup=user_first_name_markup,
+            parse_mode="HTML",
+        )
+        return USER_LAST_NAME
+    else:
+        bot = context.bot
+        bot.send_message(
+            chat_id=update.message.chat_id,
+            text="Вы уже зарегистрированы в системе:",
+        )
+    return USER_LAST_NAME
 
 
-# @log_errors
+def check_user_last_name(update, context):
+    global _user_last_name
+
+    user_message = update.message.text
+    context.user_data["first_name"] = user_message
+    message_text = f"Вы ввели имя: {user_message}"
+    update.message.reply_text(message_text)
+
+    user_last_name_buttons = [_user_last_name]
+    user_last_name_markup = keyboard_maker(user_last_name_buttons, 2)
+    context.user_data["user_last_name_buttons"] = user_last_name_buttons
+    update.message.reply_text(
+        "Введите Вашу фамилию или нажмите кнопку ниже:",
+        reply_markup=user_last_name_markup,
+        parse_mode="HTML",
+    )
+    return USER_PHONE_NUMBER
+
+
+def check_user_phone_number(update, context):
+    user_message = update.message.text
+    context.user_data["last_name"] = user_message
+    message_text = f"Вы ввели фамилию: {user_message}"
+    update.message.reply_text(message_text)
+
+    update.message.reply_text(
+        "Введите Ваш номер телефона в формате +71231234567:",
+        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="HTML",
+    )
+    return USER_PASSPORT_ID
+
+
+def check_user_passport_id(update, context):
+    user_message = update.message.text
+    context.user_data["phone_number"] = user_message
+    message_text = f"Вы ввели номер телефона: {user_message}"
+    update.message.reply_text(message_text)
+
+    update.message.reply_text(
+        "Введите Ваш паспорт в формате 11 22 123456:",
+        parse_mode="HTML",
+    )
+    return USER_BIRTHDAY
+
+
+def check_user_birthdate(update, context):
+    user_message = update.message.text
+    context.user_data["passport_id"] = user_message
+    message_text = f"Вы ввели паспортные данные: {user_message}"
+    update.message.reply_text(message_text)
+
+    update.message.reply_text(
+        "Введите Вашу дату рождения в формате гггг-мм-дд:",
+        parse_mode="HTML",
+    )
+    return SAVE_USER
+
+
+def save_user_attributes(update, context):
+    user_message = update.message.text
+    context.user_data["birthday"] = user_message
+    message_text = f"Вы ввели дату рождения: {user_message}"
+    update.message.reply_text(message_text)
+
+    user_message = update.message.text
+    context.user_data["birthdate"] = user_message
+
+    save_customer(context)
+
+    update.message.reply_text(
+        "Ваши данные сохранены в базе",
+        parse_mode="HTML",
+    )
+    return PAYMENT
+
+
+def payment(update, context):
+    update.message.reply_text(
+        "Приступим к платежам",
+        parse_mode="HTML",
+    )
+    return PAYMENT
+
+
 def end(update, context):
     bot = context.bot
     bot.send_message(
@@ -291,6 +423,34 @@ class Command(BaseCommand):
                 AMOUNT: [
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, amount),
+                ],
+                CHECK_USER: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, check_register_user),
+                ],
+                USER_LAST_NAME: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, check_user_last_name),
+                ],
+                USER_PHONE_NUMBER: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, check_user_phone_number),
+                ],
+                USER_PASSPORT_ID: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, check_user_passport_id),
+                ],
+                USER_BIRTHDAY: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, check_user_birthdate),
+                ],
+                SAVE_USER: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, save_user_attributes),
+                ],
+                PAYMENT: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, payment),
                 ],
             },
             fallbacks=[CommandHandler("end", end)],
