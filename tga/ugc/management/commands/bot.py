@@ -1,6 +1,6 @@
 import json
 import requests
-
+import re
 import os
 import time
 import logging
@@ -10,7 +10,7 @@ import phonenumbers
 import random
 #import qrcode
 
-# from datetime import date, timedelta, datetime
+from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
@@ -426,7 +426,11 @@ def check_user_passport_id(update, context):
     context.user_data["phone_number"] = user_message
     message_text = f"Вы ввели номер телефона: {user_message}"
     update.message.reply_text(message_text)
-    checking_number = phonenumbers.parse(user_message)
+    try:
+        checking_number = phonenumbers.parse(user_message)
+    except phonenumbers.NumberParseException as npe:
+        checking_number = phonenumbers.parse("+7{}".format(user_message))
+
     if phonenumbers.is_valid_number(checking_number):
         update.message.reply_text(
             "Введите Ваш паспорт в формате 11 22 123456:",
@@ -447,14 +451,19 @@ def check_user_birthdate(update, context):
     context.user_data["passport_id"] = user_message
     message_text = f"Вы ввели паспортные данные: {user_message}"
     update.message.reply_text(message_text)
-
-    # calendar, step = DetailedTelegramCalendar().build()
-    update.message.reply_text(
-        "Введите Вашу дату рождения в формате гггг-мм-дд:",
-        # reply_markup=calendar,
-        parse_mode="HTML",
-    )
-    return SAVE_USER
+    if re.match("\d{2}\s\d{2}\s\d{6}$", user_message):
+        update.message.reply_text(
+            "Введите Вашу дату рождения в формате дд.мм.гггг:",
+            parse_mode="HTML",
+        )
+        return SAVE_USER
+    else:
+        update.message.reply_text(
+            "Паспортные данные введены неверно! Введите Ваш паспорт в формате 11 22 123456:",
+            reply_markup=ReplyKeyboardRemove(),
+            parse_mode="HTML",
+        )
+        return USER_BIRTHDAY
 
 
 def save_user_attributes(update, context):
@@ -462,24 +471,42 @@ def save_user_attributes(update, context):
     context.user_data["birthday"] = user_message
     message_text = f"Вы ввели дату рождения: {user_message}"
     update.message.reply_text(message_text)
+    date_matched = True
+    try:
+        regex = datetime.strptime
+        assert regex(user_message, "%d.%m.%Y")
+    except ValueError as e:
+        date_matched = False
 
-    user_message = update.message.text
-    context.user_data["birthdate"] = user_message
+    if date_matched:
+        user_message = update.message.text
+        context.user_data["birthday"] = str(
+            datetime.strptime(user_message, "%d.%m.%Y").strftime("%Y-%m-%d")
+        )
 
-    save_customer(context)
+        save_customer(context)
 
-    update.message.reply_text(
-        "Ваши данные сохранены в базе",
-        parse_mode="HTML",
-    )
-    reg_buttons = ["Далее"]
-    reg_markup = keyboard_maker(reg_buttons, 1)
-    update.message.reply_text("Приступим к платежам!", reply_markup=reg_markup)
-    return MAKE_PAYMENT
+        update.message.reply_text(
+            "Ваши данные сохранены в базе",
+            parse_mode="HTML",
+        )
+        reg_buttons = ["Далее"]
+        reg_markup = keyboard_maker(reg_buttons, 1)
+        update.message.reply_text(
+            "Приступим к платежам!", reply_markup=reg_markup
+        )
+        return MAKE_PAYMENT
+    else:
+        update.message.reply_text(
+            "Дата рождения введена неверно! Введите Вашу дату рождения в формате дд.мм.гггг:",
+            reply_markup=ReplyKeyboardRemove(),
+            parse_mode="HTML",
+        )
+        return SAVE_USER
 
 
 def make_payment(update, context):
-    price = context.user_data["price"]
+    price = int(context.user_data["price"]) * 100
     chat_id = update.message.chat_id
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendInvoice"
     payload = {
