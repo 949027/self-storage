@@ -468,7 +468,7 @@ def check_user_birthdate(update, context):
             reply_markup=ReplyKeyboardRemove(),
             parse_mode="HTML",
         )
-        return USER_PASSPORT_ID
+        return USER_BIRTHDAY
 
 
 def save_user_attributes(update, context):
