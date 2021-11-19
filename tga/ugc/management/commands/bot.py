@@ -23,7 +23,7 @@ from telegram.ext import (
 )
 from telegram.utils.request import Request
 
-from ugc.models import Warehouses, SeasonalItems, Customers, SeasonalItemsPrice
+from ugc.models import Warehouses, SeasonalItems, Customers, SeasonalItemsPrice, AnotherItemsPrice
 
 from ugc.management.commands.price import get_meter_price, get_think_price
 
@@ -134,6 +134,7 @@ def choice(update, context):
     context.user_data["choice"] = user_message
     if user_message == "Сезонные вещи":
         things = SeasonalItems.objects.all()
+        #a =
         things_buttons = []
         for thing in things:
             things_buttons.append(thing.item_name)
