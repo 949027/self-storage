@@ -19,3 +19,15 @@ def get_meter_price(period, square_meters):
         return first_price * period
     else:
         return (first_price + next_price * (int(square_meters) - 1)) * int(period)
+
+
+def get_think_button_prices(seasonal_item, period_extension, period, amount):
+    buttons = []
+    print(seasonal_item)
+    print(period_extension)
+    print(period)
+    print(amount)
+    for button in range(1, period+1):
+        price = get_think_price(seasonal_item, period_extension, button, amount)
+        buttons.append(f"{button} {period_extension} {int(price)} p.")
+    return buttons

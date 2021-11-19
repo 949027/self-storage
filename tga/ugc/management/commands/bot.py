@@ -25,7 +25,7 @@ from telegram.utils.request import Request
 
 from ugc.models import Warehouses, SeasonalItems, Customers, SeasonalItemsPrice, AnotherItemsPrice
 
-from ugc.management.commands.price import get_meter_price, get_think_price
+from ugc.management.commands.price import get_meter_price, get_think_price, get_think_button_prices
 
 env = Env()
 env.read_env()
@@ -195,7 +195,9 @@ def amount(update, context):
         return CHOICE_PERIOD
     elif thing == "колеса":
         context.user_data["period_extension"] = "мес."
-        period_buttons = list(map(str, list(range(1, 7))))
+        seasonal_item = context.user_data.get("seasonal_item")
+        amount = context.user_data.get("amount")
+        period_buttons = get_think_button_prices(seasonal_item, "мес.", 6, amount)#list(map(str, list(range(1, 7))))
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text("Максимальный срок хранения 6 месяцев.")
         update.message.reply_text(
@@ -206,21 +208,29 @@ def amount(update, context):
 
 def choice_period(update, context):
     user_message = update.message.text
+    seasonal_item = context.user_data.get("seasonal_item")
+    amount = context.user_data.get("amount")
     if user_message == "Недели":
         context.user_data["period_extension"] = "нед."
-        period_buttons = list(map(str, list(range(1, 4))))
-        period_markup = keyboard_maker(period_buttons, 3)
+        period_buttons = get_think_button_prices(seasonal_item, "нед.", 3, amount)#list(map(str, list(range(1, 4))))
+        period_markup = keyboard_maker(period_buttons, 1)
         update.message.reply_text(
             "Укажите сколько недель вам нужно.", reply_markup=period_markup
         )
+###################
+
+        a = get_think_button_prices(seasonal_item, "нед.", 3, amount)
+        print(a)
         return PERIOD
     elif user_message == "Месяцы":
         context.user_data["period_extension"] = "мес."
-        period_buttons = list(map(str, list(range(1, 7))))
+        period_buttons = get_think_button_prices(seasonal_item, "мес.", 6, amount)#list(map(str, list(range(1, 7))))
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text(
             "Укажите сколько месяцев вам нужно.", reply_markup=period_markup
         )
+        a = get_think_button_prices(seasonal_item, "мес.", 6, amount)
+        print(a)
         return PERIOD
 
 
@@ -240,7 +250,8 @@ def another(update, context):
 
 def period(update, context):
     user_message = update.message.text
-    context.user_data["period"] = user_message
+    context.user_data["period"] = user_message[0]
+    print(f"period{user_message[0]}")
     period_buttons = ["Забронировать", "Назад"]
     period_markup = keyboard_maker(period_buttons, 1)
     choice = context.user_data.get("choice")
@@ -258,12 +269,12 @@ def period(update, context):
         seasonal_item = context.user_data.get("seasonal_item")
         period_extension = context.user_data.get("period_extension")
         amount = context.user_data.get("amount")
-        price = get_think_price(seasonal_item, period_extension, user_message, amount)
+        price = get_think_price(seasonal_item, period_extension, user_message[0], amount)
         text = f"""Ваш заказ:
                 Склад: {warehouse}
                 Вещь: {seasonal_item}
                 Количество: {amount} шт.
-                Период: {user_message} {period_extension}
+                Период: {user_message[0]} {period_extension}
                 Цена: {price} p."""
     update.message.reply_text(text, reply_markup=period_markup)
     return ORDER
