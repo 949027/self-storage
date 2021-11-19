@@ -10,7 +10,7 @@ import phonenumbers
 import random
 import qrcode
 
-# from datetime import date, timedelta, datetime
+from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
@@ -460,10 +460,9 @@ def check_user_birthdate(update, context):
     update.message.reply_text(message_text)
     if re.match("\d{2}\s\d{2}\s\d{6}$", user_message):
         update.message.reply_text(
-            "Введите Вашу дату рождения в формате гггг-мм-дд:",
+            "Введите Вашу дату рождения в формате дд.мм.гггг:",
             parse_mode="HTML",
         )
-
         return SAVE_USER
     else:
         update.message.reply_text(
@@ -479,20 +478,38 @@ def save_user_attributes(update, context):
     context.user_data["birthday"] = user_message
     message_text = f"Вы ввели дату рождения: {user_message}"
     update.message.reply_text(message_text)
+    date_matched = True
+    try:
+        regex = datetime.strptime
+        assert regex(user_message, "%d.%m.%Y")
+    except ValueError as e:
+        date_matched = False
 
-    user_message = update.message.text
-    context.user_data["birthdate"] = user_message
+    if date_matched:
+        user_message = update.message.text
+        context.user_data["birthday"] = str(
+            datetime.strptime(user_message, "%d.%m.%Y").strftime("%Y-%m-%d")
+        )
 
-    save_customer(context)
+        save_customer(context)
 
-    update.message.reply_text(
-        "Ваши данные сохранены в базе",
-        parse_mode="HTML",
-    )
-    reg_buttons = ["Далее"]
-    reg_markup = keyboard_maker(reg_buttons, 1)
-    update.message.reply_text("Приступим к платежам!", reply_markup=reg_markup)
-    return MAKE_PAYMENT
+        update.message.reply_text(
+            "Ваши данные сохранены в базе",
+            parse_mode="HTML",
+        )
+        reg_buttons = ["Далее"]
+        reg_markup = keyboard_maker(reg_buttons, 1)
+        update.message.reply_text(
+            "Приступим к платежам!", reply_markup=reg_markup
+        )
+        return MAKE_PAYMENT
+    else:
+        update.message.reply_text(
+            "Дата рождения введена неверно! Введите Вашу дату рождения в формате дд.мм.гггг:",
+            reply_markup=ReplyKeyboardRemove(),
+            parse_mode="HTML",
+        )
+        return SAVE_USER
 
 
 def make_payment(update, context):
