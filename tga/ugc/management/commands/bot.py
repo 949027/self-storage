@@ -1,4 +1,4 @@
-# import os
+import os
 import time
 import logging
 from environs import Env
@@ -8,6 +8,7 @@ import phonenumbers
 # from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
+
 # from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 from telegram import Bot
 from telegram import (
@@ -59,14 +60,15 @@ logger = logging.getLogger(__name__)
     USER_BIRTHDAY,
     SAVE_USER,
     MAKE_PAYMENT,
-) = range(15)
+    USER_FIRST_NAME,
+) = range(16)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
-        yield buttons[button: button + chunks_number]
+        yield buttons[button : button + chunks_number]
 
 
 def keyboard_maker(buttons, number):
@@ -189,7 +191,8 @@ def amount(update, context):
         period_markup = keyboard_maker(period_buttons, 5)
         update.message.reply_text("Максимальный срок хранения 6 месяцев.")
         update.message.reply_text(
-            "Выберите срок хранения, недели или месяцы.", reply_markup=period_markup
+            "Выберите срок хранения, недели или месяцы.",
+            reply_markup=period_markup,
         )
         return CHOICE_PERIOD
     elif thing == "колеса":
@@ -257,7 +260,9 @@ def period(update, context):
         seasonal_item = context.user_data.get("seasonal_item")
         period_extension = context.user_data.get("period_extension")
         amount = context.user_data.get("amount")
-        price = get_think_price(seasonal_item, period_extension, user_message, amount)
+        price = get_think_price(
+            seasonal_item, period_extension, user_message, amount
+        )
         text = f"""Ваш заказ:
                 Склад: {warehouse}
                 Вещь: {seasonal_item}
@@ -295,6 +300,41 @@ def check_register_user(update, context):
 
     customer = Customers.objects.filter(telegram_id=_telegram_id)
     if customer.count() == 0:
+        pdn_file_name = "pdn.pdf"
+        pdn_file_path = os.path.join(os.getcwd(), pdn_file_name)
+
+        bot = context.bot
+        bot.send_document(update.message.chat.id, open(pdn_file_path, "rb"))
+
+        agreement_buttons = ["Согласен", "Не согласен"]
+        agreement_markup = keyboard_maker(agreement_buttons, 2)
+
+        update.message.reply_text(
+            "Для продолжения работы Вам необходимо принять согласие"
+            + "на обработку персональных данных",
+            reply_markup=agreement_markup,
+        )
+        return USER_FIRST_NAME
+    else:
+        bot = context.bot
+        bot.send_message(
+            chat_id=update.message.chat_id,
+            text="Вы уже зарегистрированы в системе:",
+        )
+        reg_buttons = ["Далее"]
+        reg_markup = keyboard_maker(reg_buttons, 1)
+        update.message.reply_text(
+            "Приступим к платежам!", reply_markup=reg_markup
+        )
+        return MAKE_PAYMENT
+
+
+def check_user_first_name(update, context):
+    global _user_last_name
+
+    user_message = update.message.text
+
+    if user_message == "Согласен":
         telegram_user = update.effective_user
         user_first_name = telegram_user.first_name or ""
         _user_last_name = telegram_user.last_name or ""
@@ -311,10 +351,10 @@ def check_register_user(update, context):
     else:
         bot = context.bot
         bot.send_message(
-            chat_id=update.message.chat_id,
-            text="Вы уже зарегистрированы в системе:",
+            chat_id=update.callback_query.from_user.id,
+            text="Всего Вам хорошего!",
         )
-    return USER_LAST_NAME
+        return ConversationHandler.END
 
 
 def check_user_last_name(update, context):
@@ -468,6 +508,10 @@ class Command(BaseCommand):
                 CHECK_USER: [
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, check_register_user),
+                ],
+                USER_FIRST_NAME: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, check_user_first_name),
                 ],
                 USER_LAST_NAME: [
                     CommandHandler("start", start),
