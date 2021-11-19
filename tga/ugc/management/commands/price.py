@@ -1,40 +1,33 @@
-prices = {
-    "лыжи": {
-        "week_price": 100,
-        "month_price": 300
-    },
-    "сноуборд": {
-        "week_price": 100,
-        "month_price": 300
-    },
-    "велосипед": {
-        "week_price": 150,
-        "month_price": 400
-    },
-    "колеса": {
-        "week_price": 100,
-        "month_price": 400
-    },
-    "square_meters": {
-        "first_price": 599,
-        "next_price": 150
-    }
+from ugc.models import Warehouses, SeasonalItems, Customers, SeasonalItemsPrice, AnotherItemsPrice
 
-}
 
 def get_think_price(seasonal_item, period_extension, period, amount):
+    item = SeasonalItems.objects.filter(item_name__contains=seasonal_item)
     if period_extension == "нед.":
-        period_extension = "week_price"
+        week_price = SeasonalItemsPrice.objects.get(item_name=item[0]).week_price
+        return week_price * int(period) * int(amount)
     else:
-        period_extension = "month_price"
-
-    return prices[seasonal_item][period_extension] * int(period) * int(amount)
+        month_price = SeasonalItemsPrice.objects.get(item_name=item[0]).month_price
+        return month_price * int(period) * int(amount)
 
 
 def get_meter_price(period, square_meters):
-    first_price = prices["square_meters"]["first_price"]
-    next_price = prices["square_meters"]["next_price"]
+    prices = AnotherItemsPrice.objects.all()[0]
+    first_price = prices.first_price
+    next_price = prices.next_price
     if square_meters == 1:
         return first_price * period
     else:
         return (first_price + next_price * (int(square_meters) - 1)) * int(period)
+
+
+def get_think_button_prices(seasonal_item, period_extension, period, amount):
+    buttons = []
+    print(seasonal_item)
+    print(period_extension)
+    print(period)
+    print(amount)
+    for button in range(1, period+1):
+        price = get_think_price(seasonal_item, period_extension, button, amount)
+        buttons.append(f"{button} {period_extension} {int(price)} p.")
+    return buttons
