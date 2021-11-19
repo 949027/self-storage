@@ -1,6 +1,6 @@
 import json
 import requests
-
+import re
 import os
 import time
 import logging
@@ -454,14 +454,21 @@ def check_user_birthdate(update, context):
     context.user_data["passport_id"] = user_message
     message_text = f"Вы ввели паспортные данные: {user_message}"
     update.message.reply_text(message_text)
-
-    # calendar, step = DetailedTelegramCalendar().build()
-    update.message.reply_text(
-        "Введите Вашу дату рождения в формате гггг-мм-дд:",
-        # reply_markup=calendar,
-        parse_mode="HTML",
-    )
-    return SAVE_USER
+    if re.match("\d{2}\s\d{2}\s\d{6}$", user_message):
+        # calendar, step = DetailedTelegramCalendar().build()
+        update.message.reply_text(
+            "Введите Вашу дату рождения в формате гггг-мм-дд:",
+            # reply_markup=calendar,
+            parse_mode="HTML",
+        )
+        return SAVE_USER
+    else:
+        update.message.reply_text(
+            "Паспортные данные введены неверно! Введите Ваш паспорт в формате 11 22 123456:",
+            reply_markup=ReplyKeyboardRemove(),
+            parse_mode="HTML",
+        )
+        return USER_PASSPORT_ID
 
 
 def save_user_attributes(update, context):
