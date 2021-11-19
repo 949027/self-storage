@@ -1,9 +1,13 @@
+import json
+import requests
 # import os
 import time
 import logging
 from environs import Env
 
 import phonenumbers
+import random
+import qrcode
 
 # from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
@@ -19,6 +23,7 @@ from telegram.ext import (
     CommandHandler,
     ConversationHandler,
     MessageHandler,
+    PreCheckoutQueryHandler,
     Filters,
 )
 from telegram.utils.request import Request
@@ -30,6 +35,7 @@ from ugc.management.commands.price import get_meter_price, get_think_price, get_
 env = Env()
 env.read_env()
 TG_TOKEN = env.str("TG_TOKEN")
+ukassa_token = env.str('UKASSA_TOKEN')
 
 request = Request(connect_timeout=0.5, read_timeout=1.0)
 bot = Bot(
@@ -59,7 +65,9 @@ logger = logging.getLogger(__name__)
     USER_BIRTHDAY,
     SAVE_USER,
     MAKE_PAYMENT,
-) = range(15)
+    CATCH_PAYMENT,
+    CREATE_QR,
+) = range(17)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
@@ -277,6 +285,7 @@ def period(update, context):
                 Период: {user_message[0]} {period_extension}
                 Цена: {price} p."""
     update.message.reply_text(text, reply_markup=period_markup)
+    context.user_data['price'] = price
     return ORDER
 
 
@@ -420,11 +429,40 @@ def save_user_attributes(update, context):
 
 
 def make_payment(update, context):
-    update.message.reply_text(
-        "Приступим к платежам",
-        parse_mode="HTML",
-    )
-    return MAKE_PAYMENT
+    price = context.user_data['price']
+    chat_id = update.message.chat_id
+    url = f'https://api.telegram.org/bot{TG_TOKEN}/sendInvoice'
+    payload = {
+        'chat_id': chat_id,
+        'title': 'Бронирование склада',
+        'description': 'Описание',
+        'payload': 'payload',
+        'provider_token': ukassa_token,
+        'currency': 'RUB',
+        'start_parameter': 'test',
+        'prices': json.dumps([{'label': 'Руб', 'amount': price}]),
+
+    }
+    response = requests.get(url, params=payload)
+    response.raise_for_status()
+
+
+def catch_payment(update, context):
+    pre_checkout_query_id = update['pre_checkout_query']['id']
+    context.bot.answer_pre_checkout_query(pre_checkout_query_id, ok=True)
+    return CREATE_QR
+
+
+# def create_qr(update, context):
+#     code = random.randint(100000, 999999)
+#     filename = f"{code}.png"
+#     img = qrcode.make(code)
+#     img.save(filename)
+#
+#     chat_id = update.message.chat_id
+#     with open(filename, "rb") as file:
+#         bot.send_photo(chat_id=chat_id,
+#                        photo=open(filename, "rb"))
 
 
 def end(update, context):
@@ -505,11 +543,16 @@ class Command(BaseCommand):
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, make_payment),
                 ],
+                # CREATE_QR: [
+                #     CommandHandler("start", start),
+                #     MessageHandler(Filters.text, create_qr),
+                # ],
             },
             fallbacks=[CommandHandler("end", end)],
         )
 
         updater.dispatcher.add_handler(conv_handler)
+        updater.dispatcher.add_handler(PreCheckoutQueryHandler(catch_payment))
 
         updater.start_polling()
         updater.idle()
