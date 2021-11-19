@@ -433,7 +433,11 @@ def check_user_passport_id(update, context):
     context.user_data["phone_number"] = user_message
     message_text = f"Вы ввели номер телефона: {user_message}"
     update.message.reply_text(message_text)
-    checking_number = phonenumbers.parse(user_message)
+    try:
+        checking_number = phonenumbers.parse(user_message)
+    except phonenumbers.NumberParseException as npe:
+        checking_number = phonenumbers.parse("+7{}".format(user_message))
+
     if phonenumbers.is_valid_number(checking_number):
         update.message.reply_text(
             "Введите Ваш паспорт в формате 11 22 123456:",
@@ -455,10 +459,8 @@ def check_user_birthdate(update, context):
     message_text = f"Вы ввели паспортные данные: {user_message}"
     update.message.reply_text(message_text)
     if re.match("\d{2}\s\d{2}\s\d{6}$", user_message):
-        # calendar, step = DetailedTelegramCalendar().build()
         update.message.reply_text(
             "Введите Вашу дату рождения в формате гггг-мм-дд:",
-            # reply_markup=calendar,
             parse_mode="HTML",
         )
         return SAVE_USER
