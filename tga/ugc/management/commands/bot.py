@@ -513,7 +513,7 @@ def save_user_attributes(update, context):
 
 
 def make_payment(update, context):
-    price = int(context.user_data["price"])
+    price = int(context.user_data["price"]) * 100
     chat_id = update.message.chat_id
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendInvoice"
     payload = {
