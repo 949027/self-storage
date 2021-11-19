@@ -1,6 +1,7 @@
 import json
 import requests
-# import os
+
+import os
 import time
 import logging
 from environs import Env
@@ -12,6 +13,7 @@ import qrcode
 # from datetime import date, timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
+
 # from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 from telegram import Bot
 from telegram import (
@@ -28,14 +30,24 @@ from telegram.ext import (
 )
 from telegram.utils.request import Request
 
-from ugc.models import Warehouses, SeasonalItems, Customers, SeasonalItemsPrice, AnotherItemsPrice
+from ugc.models import (
+    Warehouses,
+    SeasonalItems,
+    Customers,
+    SeasonalItemsPrice,
+    AnotherItemsPrice,
+)
 
-from ugc.management.commands.price import get_meter_price, get_think_price, get_think_button_prices
+from ugc.management.commands.price import (
+    get_meter_price,
+    get_think_price,
+    get_think_button_prices,
+)
 
 env = Env()
 env.read_env()
 TG_TOKEN = env.str("TG_TOKEN")
-ukassa_token = env.str('UKASSA_TOKEN')
+ukassa_token = env.str("UKASSA_TOKEN")
 
 request = Request(connect_timeout=0.5, read_timeout=1.0)
 bot = Bot(
@@ -67,14 +79,15 @@ logger = logging.getLogger(__name__)
     MAKE_PAYMENT,
     CATCH_PAYMENT,
     CREATE_QR,
-) = range(17)
+    USER_FIRST_NAME,
+) = range(18)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
-        yield buttons[button: button + chunks_number]
+        yield buttons[button : button + chunks_number]
 
 
 def keyboard_maker(buttons, number):
@@ -142,7 +155,7 @@ def choice(update, context):
     context.user_data["choice"] = user_message
     if user_message == "Сезонные вещи":
         things = SeasonalItems.objects.all()
-        #a =
+        # a =
         things_buttons = []
         for thing in things:
             things_buttons.append(thing.item_name)
@@ -198,14 +211,17 @@ def amount(update, context):
         period_markup = keyboard_maker(period_buttons, 5)
         update.message.reply_text("Максимальный срок хранения 6 месяцев.")
         update.message.reply_text(
-            "Выберите срок хранения, недели или месяцы.", reply_markup=period_markup
+            "Выберите срок хранения, недели или месяцы.",
+            reply_markup=period_markup,
         )
         return CHOICE_PERIOD
     elif thing == "колеса":
         context.user_data["period_extension"] = "мес."
         seasonal_item = context.user_data.get("seasonal_item")
         amount = context.user_data.get("amount")
-        period_buttons = get_think_button_prices(seasonal_item, "мес.", 6, amount)#list(map(str, list(range(1, 7))))
+        period_buttons = get_think_button_prices(
+            seasonal_item, "мес.", 6, amount
+        )  # list(map(str, list(range(1, 7))))
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text("Максимальный срок хранения 6 месяцев.")
         update.message.reply_text(
@@ -220,19 +236,23 @@ def choice_period(update, context):
     amount = context.user_data.get("amount")
     if user_message == "Недели":
         context.user_data["period_extension"] = "нед."
-        period_buttons = get_think_button_prices(seasonal_item, "нед.", 3, amount)#list(map(str, list(range(1, 4))))
+        period_buttons = get_think_button_prices(
+            seasonal_item, "нед.", 3, amount
+        )  # list(map(str, list(range(1, 4))))
         period_markup = keyboard_maker(period_buttons, 1)
         update.message.reply_text(
             "Укажите сколько недель вам нужно.", reply_markup=period_markup
         )
-###################
+        ###################
 
         a = get_think_button_prices(seasonal_item, "нед.", 3, amount)
         print(a)
         return PERIOD
     elif user_message == "Месяцы":
         context.user_data["period_extension"] = "мес."
-        period_buttons = get_think_button_prices(seasonal_item, "мес.", 6, amount)#list(map(str, list(range(1, 7))))
+        period_buttons = get_think_button_prices(
+            seasonal_item, "мес.", 6, amount
+        )  # list(map(str, list(range(1, 7))))
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text(
             "Укажите сколько месяцев вам нужно.", reply_markup=period_markup
@@ -277,7 +297,9 @@ def period(update, context):
         seasonal_item = context.user_data.get("seasonal_item")
         period_extension = context.user_data.get("period_extension")
         amount = context.user_data.get("amount")
-        price = get_think_price(seasonal_item, period_extension, user_message[0], amount)
+        price = get_think_price(
+            seasonal_item, period_extension, user_message[0], amount
+        )
         text = f"""Ваш заказ:
                 Склад: {warehouse}
                 Вещь: {seasonal_item}
@@ -285,7 +307,7 @@ def period(update, context):
                 Период: {user_message[0]} {period_extension}
                 Цена: {price} p."""
     update.message.reply_text(text, reply_markup=period_markup)
-    context.user_data['price'] = price
+    context.user_data["price"] = price
     return ORDER
 
 
@@ -316,6 +338,41 @@ def check_register_user(update, context):
 
     customer = Customers.objects.filter(telegram_id=_telegram_id)
     if customer.count() == 0:
+        pdn_file_name = "pdn.pdf"
+        pdn_file_path = os.path.join(os.getcwd(), pdn_file_name)
+
+        bot = context.bot
+        bot.send_document(update.message.chat.id, open(pdn_file_path, "rb"))
+
+        agreement_buttons = ["Согласен", "Не согласен"]
+        agreement_markup = keyboard_maker(agreement_buttons, 2)
+
+        update.message.reply_text(
+            "Для продолжения работы Вам необходимо принять согласие"
+            + "на обработку персональных данных",
+            reply_markup=agreement_markup,
+        )
+        return USER_FIRST_NAME
+    else:
+        bot = context.bot
+        bot.send_message(
+            chat_id=update.message.chat_id,
+            text="Вы уже зарегистрированы в системе:",
+        )
+        reg_buttons = ["Далее"]
+        reg_markup = keyboard_maker(reg_buttons, 1)
+        update.message.reply_text(
+            "Приступим к платежам!", reply_markup=reg_markup
+        )
+        return MAKE_PAYMENT
+
+
+def check_user_first_name(update, context):
+    global _user_last_name
+
+    user_message = update.message.text
+
+    if user_message == "Согласен":
         telegram_user = update.effective_user
         user_first_name = telegram_user.first_name or ""
         _user_last_name = telegram_user.last_name or ""
@@ -332,10 +389,10 @@ def check_register_user(update, context):
     else:
         bot = context.bot
         bot.send_message(
-            chat_id=update.message.chat_id,
-            text="Вы уже зарегистрированы в системе:",
+            chat_id=update.callback_query.from_user.id,
+            text="Всего Вам хорошего!",
         )
-    return USER_LAST_NAME
+        return ConversationHandler.END
 
 
 def check_user_last_name(update, context):
@@ -429,26 +486,25 @@ def save_user_attributes(update, context):
 
 
 def make_payment(update, context):
-    price = context.user_data['price']
+    price = context.user_data["price"]
     chat_id = update.message.chat_id
-    url = f'https://api.telegram.org/bot{TG_TOKEN}/sendInvoice'
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendInvoice"
     payload = {
-        'chat_id': chat_id,
-        'title': 'Бронирование склада',
-        'description': 'Описание',
-        'payload': 'payload',
-        'provider_token': ukassa_token,
-        'currency': 'RUB',
-        'start_parameter': 'test',
-        'prices': json.dumps([{'label': 'Руб', 'amount': price}]),
-
+        "chat_id": chat_id,
+        "title": "Бронирование склада",
+        "description": "Описание",
+        "payload": "payload",
+        "provider_token": ukassa_token,
+        "currency": "RUB",
+        "start_parameter": "test",
+        "prices": json.dumps([{"label": "Руб", "amount": price}]),
     }
     response = requests.get(url, params=payload)
     response.raise_for_status()
 
 
 def catch_payment(update, context):
-    pre_checkout_query_id = update['pre_checkout_query']['id']
+    pre_checkout_query_id = update["pre_checkout_query"]["id"]
     context.bot.answer_pre_checkout_query(pre_checkout_query_id, ok=True)
     return CREATE_QR
 
@@ -518,6 +574,10 @@ class Command(BaseCommand):
                 CHECK_USER: [
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, check_register_user),
+                ],
+                USER_FIRST_NAME: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, check_user_first_name),
                 ],
                 USER_LAST_NAME: [
                     CommandHandler("start", start),
