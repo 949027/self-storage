@@ -463,6 +463,7 @@ def check_user_birthdate(update, context):
             "Введите Вашу дату рождения в формате гггг-мм-дд:",
             parse_mode="HTML",
         )
+
         return SAVE_USER
     else:
         update.message.reply_text(
