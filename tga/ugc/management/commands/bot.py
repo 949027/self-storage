@@ -11,7 +11,8 @@ import random
 
 # import qrcode
 
-from datetime import datetime
+from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
@@ -38,6 +39,7 @@ from ugc.models import (
     Customers,
     SeasonalItemsPrice,
     AnotherItemsPrice,
+    Orders,
 )
 
 from ugc.management.commands.price import (
@@ -111,6 +113,37 @@ def save_customer(context):
         birthday=context.user_data["birthday"],
     )
     customer.save()
+
+    return customer
+
+
+def save_order(context):
+    warehouse_name = context.user_data["warehouse"]
+    warehouse = Warehouses.object.get(name=warehouse_name)
+    seasonal_item = None
+    if context.user_data["seasonal_item"]:
+        seasonal_item = SeasonalItems.object.get(
+            item_name=context.user_data["seasonal_item"]
+        )
+    today = date.today()
+    if context.user_data["period_extension"] == "мес.":
+        end_date = today + relativedelta(months=1)
+
+    context.user_data["period_extension"] = ("нед.",)
+
+    order = Orders(
+        customer=context.user_data["customer"],
+        warehouse=warehouse,
+        seasonal_item=seasonal_item,
+        thing_type=context.user_data["choice"],
+        cell_size=context.user_data["square_meters"] or None,
+        amount=context.user_data["amount"] or None,
+        comment="" or None,
+        start_date=today,
+        end_date=today,
+        cost=context.user_data["price"],
+    )
+    order.save()
 
 
 def start(update, context):
@@ -427,13 +460,6 @@ def check_user_phone_number(update, context):
         "Нажмите кнопку ниже или введите Ваш номер телефона в формате +71231234567",
         reply_markup=reply_markup,
     )
-    # print(update.message.contact.phone_number)
-
-    # update.message.reply_text(
-    #     "Введите Ваш номер телефона в формате +71231234567:",
-    #     reply_markup=ReplyKeyboardRemove(),
-    #     parse_mode="HTML",
-    # )
     return USER_PASSPORT_ID
 
 
@@ -514,7 +540,8 @@ def save_user_attributes(update, context):
             datetime.strptime(user_message, "%d.%m.%Y").strftime("%Y-%m-%d")
         )
 
-        save_customer(context)
+        customer = save_customer(context)
+        context.user_data["customer"] = customer
 
         update.message.reply_text(
             "Ваши данные сохранены в базе",
