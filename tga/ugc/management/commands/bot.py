@@ -8,7 +8,8 @@ from environs import Env
 
 import phonenumbers
 import random
-#import qrcode
+
+# import qrcode
 
 from datetime import datetime
 from django.core.management.base import BaseCommand
@@ -19,6 +20,7 @@ from telegram import Bot
 from telegram import (
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
+    KeyboardButton,
 )
 from telegram.ext import (
     Updater,
@@ -259,7 +261,9 @@ def another(update, context):
     user_message = update.message.text
     context.user_data["square_meters"] = user_message
     context.user_data["period_extension"] = "мес."
-    another_buttons = get_another_button_prices(12, user_message)#list(map(str, list(range(1, 13))))
+    another_buttons = get_another_button_prices(
+        12, user_message
+    )  # list(map(str, list(range(1, 13))))
     another_markup = keyboard_maker(another_buttons, 3)
     text = "Мы можем хранить можем сдать ячейку до 12 месяцев"
     update.message.reply_text(text)
@@ -413,10 +417,33 @@ def check_user_phone_number(update, context):
     message_text = f"Вы ввели фамилию: {user_message}"
     update.message.reply_text(message_text)
 
+    contact_keyboard = KeyboardButton(
+        text="Отправить номер телефона", request_contact=True
+    )
+    reply_markup = ReplyKeyboardMarkup([[contact_keyboard]])
     update.message.reply_text(
-        "Введите Ваш номер телефона в формате +71231234567:",
-        reply_markup=ReplyKeyboardRemove(),
-        parse_mode="HTML",
+        "Нажмите кнопку ниже или введите Ваш номер телефона в формате +71231234567",
+        reply_markup=reply_markup,
+    )
+    # print(update.message.contact.phone_number)
+
+    # update.message.reply_text(
+    #     "Введите Ваш номер телефона в формате +71231234567:",
+    #     reply_markup=ReplyKeyboardRemove(),
+    #     parse_mode="HTML",
+    # )
+    return USER_PASSPORT_ID
+
+
+def get_contact(update, context):
+    text = ""
+    if update.message.contact:
+        text += str(update.message.contact.phone_number)
+    phone_buttons = [text]
+    phone_markup = keyboard_maker(phone_buttons, 2)
+    update.message.reply_text(
+        "Нажмите кнопку с Вашим номером телефона внизу для подтверждения",
+        reply_markup=phone_markup,
     )
     return USER_PASSPORT_ID
 
@@ -433,7 +460,8 @@ def check_user_passport_id(update, context):
 
     if phonenumbers.is_valid_number(checking_number):
         update.message.reply_text(
-            "Введите Ваш паспорт в формате 11 22 123456:",
+            "Введите Ваш паспорт в формате 1122 123456:",
+            reply_markup=ReplyKeyboardRemove(),
             parse_mode="HTML",
         )
         return USER_BIRTHDAY
@@ -451,7 +479,7 @@ def check_user_birthdate(update, context):
     context.user_data["passport_id"] = user_message
     message_text = f"Вы ввели паспортные данные: {user_message}"
     update.message.reply_text(message_text)
-    if re.match("\d{2}\s\d{2}\s\d{6}$", user_message):
+    if re.match("\d{4}\s\d{6}$", user_message):
         update.message.reply_text(
             "Введите Вашу дату рождения в формате дд.мм.гггг:",
             parse_mode="HTML",
@@ -633,6 +661,9 @@ class Command(BaseCommand):
 
         updater.dispatcher.add_handler(conv_handler)
         updater.dispatcher.add_handler(PreCheckoutQueryHandler(catch_payment))
+        updater.dispatcher.add_handler(
+            MessageHandler(Filters.contact, get_contact)
+        )
 
         updater.start_polling()
         updater.idle()
