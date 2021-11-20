@@ -420,7 +420,9 @@ def check_user_phone_number(update, context):
     contact_keyboard = KeyboardButton(
         text="Отправить номер телефона", request_contact=True
     )
-    reply_markup = ReplyKeyboardMarkup([[contact_keyboard]])
+    reply_markup = ReplyKeyboardMarkup(
+        [[contact_keyboard]], resize_keyboard=True
+    )
     update.message.reply_text(
         "Нажмите кнопку ниже или введите Ваш номер телефона в формате +71231234567",
         reply_markup=reply_markup,
@@ -487,7 +489,7 @@ def check_user_birthdate(update, context):
         return SAVE_USER
     else:
         update.message.reply_text(
-            "Паспортные данные введены неверно! Введите Ваш паспорт в формате 11 22 123456:",
+            "Паспортные данные введены неверно! Введите Ваш паспорт в формате 1122 123456:",
             reply_markup=ReplyKeyboardRemove(),
             parse_mode="HTML",
         )
