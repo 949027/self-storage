@@ -157,7 +157,9 @@ class Orders(models.Model):
     warehouse = models.ForeignKey(
         to="ugc.Warehouses",
         verbose_name="Склад",
-        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     seasonal_item = models.ForeignKey(
         to="ugc.SeasonalItems",
@@ -184,6 +186,8 @@ class Orders(models.Model):
         verbose_name="Количество вещей",
     )
     comment = models.TextField(
+        blank=True,
+        null=True,
         verbose_name="Комментарий к заказу",
     )
     start_date = models.DateField(
