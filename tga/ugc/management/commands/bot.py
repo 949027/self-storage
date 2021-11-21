@@ -599,7 +599,7 @@ def create_qr(update, context):
     img = qrcode.make(code)
     img.save(filename)
 
-    save_order(context)
+    # save_order(context)
 
     chat_id = update.message.chat_id
     bot.send_message(
