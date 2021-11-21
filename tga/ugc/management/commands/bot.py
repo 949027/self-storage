@@ -128,9 +128,9 @@ def save_order(context):
         )
     today = date.today()
     if context.user_data["period_extension"] == "мес.":
-        end_date = today + relativedelta(months=1)
-
-    context.user_data["period_extension"] = ("нед.",)
+        end_date = today + relativedelta(months=context.user_data["period"])
+    elif context.user_data["period_extension"] == "нед.":
+        end_date = today + relativedelta(weeks=context.user_data["period"])
 
     order = Orders(
         customer=context.user_data["customer"],
@@ -582,9 +582,7 @@ def make_payment(update, context):
 
     reg_buttons = ["Новый заказ", "Мои заказы"]
     reg_markup = keyboard_maker(reg_buttons, 1)
-    update.message.reply_text(
-        "Оплатите заказ", reply_markup=reg_markup
-    )
+    update.message.reply_text("Оплатите заказ", reply_markup=reg_markup)
     return CATCH_PAYMENT
 
 
@@ -601,19 +599,19 @@ def create_qr(update, context):
     img = qrcode.make(code)
     img.save(filename)
 
+    save_order(context)
+
     chat_id = update.message.chat_id
     bot.send_message(
-        chat_id=chat_id, text="Получите Ваш QR-код для доступа к складу!"
+        chat_id=chat_id,
+        text="Данные по заказу сохранены! Получите Ваш QR-код для доступа к складу!",
     )
     with open(filename, "rb") as file:
-        bot.send_photo(chat_id=chat_id,
-                       photo=open(filename, "rb"))
+        bot.send_photo(chat_id=chat_id, photo=open(filename, "rb"))
     os.remove(filename)
-    bot.send_message(
-        chat_id=chat_id, text="Всего Вам хорошего!"
-    )
+    bot.send_message(chat_id=chat_id, text="Всего Вам хорошего!")
 
-    #return ???
+    # return ???
 
 
 def end(update, context):
