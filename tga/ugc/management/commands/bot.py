@@ -70,6 +70,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 (
+    START,
+    MENU,
     WAREHOISES,
     CHOICE,
     ANOTHER,
@@ -89,14 +91,14 @@ logger = logging.getLogger(__name__)
     CREATE_QR,
     USER_FIRST_NAME,
     GET_LOCATION,
-) = range(19)
+) = range(21)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
-        yield buttons[button : button + chunks_number]
+        yield buttons[button: button + chunks_number]
 
 
 def keyboard_maker(buttons, number):
@@ -165,25 +167,41 @@ def start(update, context):
         caption=caption,
         parse_mode="HTML",
     )
-    update.message.reply_text(text)
-    warehouses = Warehouses.objects.all()
-    warehouse_buttons = []
-    menu_text = ""
-    for warehouse in warehouses:
-        warehouse_buttons.append(warehouse.name)
-        warehouse_card = Warehouses.objects.get(name=warehouse.name)
-        menu_text += f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
-    location_button = KeyboardButton(
-        "Отправить геопозицию", request_location=True
-    )
-    warehouse_buttons.append(location_button)
-    warehouse_markup = keyboard_maker(warehouse_buttons, 2)
-    context.user_data["menu_text"] = menu_text
-    context.user_data["warehouse_markup"] = warehouse_markup
+    start_buttons = ["Заказать хранение"]
+    if True:  # Здесь нужна проверка на наличие заказов
+        start_buttons.append("Мои заказы")
+    start_markup = keyboard_maker(start_buttons, 1)
     update.message.reply_text(
-        menu_text, reply_markup=warehouse_markup, parse_mode="HTML"
-    )
-    return WAREHOISES
+        text, reply_markup=start_markup)
+    return MENU
+
+
+def menu(update, context):
+    user_message = update.message.text
+    if user_message == "Заказать хранение":
+        warehouses = Warehouses.objects.all()
+        warehouse_buttons = []
+        menu_text = ""
+        for warehouse in warehouses:
+            warehouse_buttons.append(warehouse.name)
+            warehouse_card = Warehouses.objects.get(name=warehouse.name)
+            menu_text += f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
+        location_button = KeyboardButton(
+            "Отправить геопозицию", request_location=True
+        )
+        warehouse_buttons.append(location_button)
+        warehouse_markup = keyboard_maker(warehouse_buttons, 2)
+        context.user_data["menu_text"] = menu_text
+        context.user_data["warehouse_markup"] = warehouse_markup
+        update.message.reply_text(
+            menu_text, reply_markup=warehouse_markup, parse_mode="HTML"
+        )
+        return WAREHOISES
+    elif user_message == "Мои заказы":
+        menu_buttons = ["Назад"]
+        menu_markup = keyboard_maker(menu_buttons, 1)
+        update.message.reply_text("Ваши заказы", reply_markup=menu_markup)
+        return START
 
 
 def get_location(bot, update):
@@ -365,16 +383,18 @@ def order(update, context):
         reg_buttons = ["Далее"]
         reg_markup = keyboard_maker(reg_buttons, 1)
         update.message.reply_text(
-            "Приступим к регистрации!", reply_markup=reg_markup
+            "Приступим к регистрации!",
+            reply_markup=reg_markup
         )
         return CHECK_USER
     elif user_message == "Назад":
-        warehouse_markup = context.user_data.get("warehouse_markup")
-        menu_text = context.user_data.get("menu_text")
+        menu_buttons = ["Меню"]
+        menu_markup = keyboard_maker(menu_buttons, 1)
         update.message.reply_text(
-            menu_text, reply_markup=warehouse_markup, parse_mode="HTML"
+            "Нажмите меню для возврата",
+            reply_markup=menu_markup
         )
-        return WAREHOISES
+        return START
 
 
 def check_register_user(update, context):
@@ -627,9 +647,13 @@ def create_qr(update, context):
     with open(filename, "rb") as file:
         bot.send_photo(chat_id=chat_id, photo=open(filename, "rb"))
     os.remove(filename)
-    bot.send_message(chat_id=chat_id, text="Всего Вам хорошего!")
-
-    # return ???
+    qr_buttons = ["Меню"]
+    qr_markup = keyboard_maker(qr_buttons, 1)
+    bot.send_message(chat_id=chat_id, text="Спасибо за ваш заказ!")
+    bot.send_message(chat_id=chat_id,
+                     text="В меню вы сможете посмотреть ваши заказы и сделать новые",
+                     reply_markup=qr_markup)
+    return START
 
 
 def end(update, context):
@@ -650,6 +674,14 @@ class Command(BaseCommand):
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler("start", start)],
             states={
+                START: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, start),
+                ],
+                MENU: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, menu),
+                ],
                 WAREHOISES: [
                     CommandHandler("start", start),
                     MessageHandler(Filters.location, get_location),

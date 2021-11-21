@@ -52,7 +52,7 @@ class Customers(models.Model):
     )
 
     def __str__(self):
-        return f"Заказчик {self.first_name} {self.last_name}"
+        return f"Заказчик {self.telegram_id} {self.first_name} {self.last_name}"
 
     class Meta:
         verbose_name = "Заказчик"
