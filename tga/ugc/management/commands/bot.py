@@ -123,7 +123,7 @@ def save_customer(context):
 
 def save_order(context):
     warehouse_name = context.user_data["warehouse"]
-    warehouse = Warehouses.object.get(name=warehouse_name)
+    warehouse = Warehouses.objects.get(name=warehouse_name)
     seasonal_item = None
     if context.user_data["seasonal_item"]:
         seasonal_item = SeasonalItems.object.get(
@@ -145,7 +145,7 @@ def save_order(context):
         comment="" or None,
         start_date=today,
         end_date=today,
-        cost=context.user_data["price"],
+        cost=context.user_data["price"] or 0,
     )
     order.save()
 
@@ -170,8 +170,9 @@ def start(update, context):
         warehouse_buttons.append(warehouse.name)
         warehouse_card = Warehouses.objects.get(name=warehouse.name)
         menu_text += f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
-    location_button = KeyboardButton('Отправить геопозицию',
-                                     request_location=True)
+    location_button = KeyboardButton(
+        "Отправить геопозицию", request_location=True
+    )
     warehouse_buttons.append(location_button)
     warehouse_markup = keyboard_maker(warehouse_buttons, 2)
     context.user_data["menu_text"] = menu_text
@@ -398,6 +399,7 @@ def check_register_user(update, context):
         )
         return USER_FIRST_NAME
     else:
+        save_order(context)
         bot = context.bot
         bot.send_message(
             chat_id=update.message.chat_id,
