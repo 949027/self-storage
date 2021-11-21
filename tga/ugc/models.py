@@ -145,10 +145,6 @@ class AnotherItemsPrice(models.Model):
 
 
 class Orders(models.Model):
-    TYPE_CHOICES = [
-        ("сезонные вещи", "сезонные вещи"),
-        ("другое", "другое"),
-    ]
     customer = models.ForeignKey(
         to="ugc.Customers",
         verbose_name="Заказчик",
@@ -170,7 +166,6 @@ class Orders(models.Model):
     )
     thing_type = models.CharField(
         max_length=256,
-        choices=TYPE_CHOICES,
         verbose_name="Что хранить",
     )
     cell_size = models.PositiveIntegerField(
