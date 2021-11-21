@@ -126,7 +126,7 @@ def save_order(context):
     warehouse = Warehouses.objects.get(name=warehouse_name)
     seasonal_item = None
     if context.user_data["seasonal_item"]:
-        seasonal_item = SeasonalItems.object.get(
+        seasonal_item = SeasonalItems.objects.get(
             item_name=context.user_data["seasonal_item"]
         )
     today = date.today()
@@ -399,7 +399,6 @@ def check_register_user(update, context):
         )
         return USER_FIRST_NAME
     else:
-        save_order(context)
         bot = context.bot
         bot.send_message(
             chat_id=update.message.chat_id,
