@@ -1,3 +1,4 @@
+import qrcode
 import json
 import requests
 import re
@@ -130,9 +131,9 @@ def save_order(context):
         )
     today = date.today()
     if context.user_data["period_extension"] == "мес.":
-        end_date = today + relativedelta(months=1)
-
-    context.user_data["period_extension"] = ("нед.",)
+        end_date = today + relativedelta(months=context.user_data["period"])
+    elif context.user_data["period_extension"] == "нед.":
+        end_date = today + relativedelta(weeks=context.user_data["period"])
 
     order = Orders(
         customer=context.user_data["customer"],
@@ -592,23 +593,38 @@ def make_payment(update, context):
     response = requests.get(url, params=payload)
     response.raise_for_status()
 
+    reg_buttons = ["Новый заказ", "Мои заказы"]
+    reg_markup = keyboard_maker(reg_buttons, 1)
+    update.message.reply_text("Оплатите заказ", reply_markup=reg_markup)
+    return CATCH_PAYMENT
+
 
 def catch_payment(update, context):
     pre_checkout_query_id = update["pre_checkout_query"]["id"]
     context.bot.answer_pre_checkout_query(pre_checkout_query_id, ok=True)
+
     return CREATE_QR
 
 
-# def create_qr(update, context):
-#     code = random.randint(100000, 999999)
-#     filename = f"{code}.png"
-#     img = qrcode.make(code)
-#     img.save(filename)
-#
-#     chat_id = update.message.chat_id
-#     with open(filename, "rb") as file:
-#         bot.send_photo(chat_id=chat_id,
-#                        photo=open(filename, "rb"))
+def create_qr(update, context):
+    code = random.randint(100000, 999999)
+    filename = f"{code}.png"
+    img = qrcode.make(code)
+    img.save(filename)
+
+    # save_order(context)
+
+    chat_id = update.message.chat_id
+    bot.send_message(
+        chat_id=chat_id,
+        text="Данные по заказу сохранены! Получите Ваш QR-код для доступа к складу!",
+    )
+    with open(filename, "rb") as file:
+        bot.send_photo(chat_id=chat_id, photo=open(filename, "rb"))
+    os.remove(filename)
+    bot.send_message(chat_id=chat_id, text="Всего Вам хорошего!")
+
+    # return ???
 
 
 def end(update, context):
@@ -694,14 +710,13 @@ class Command(BaseCommand):
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, make_payment),
                 ],
-                # CREATE_QR: [
-                #     CommandHandler("start", start),
-                #     MessageHandler(Filters.text, create_qr),
-                # ],
             },
             fallbacks=[CommandHandler("end", end)],
         )
 
+        updater.dispatcher.add_handler(
+            MessageHandler(Filters.successful_payment, create_qr)
+        )
         updater.dispatcher.add_handler(conv_handler)
         updater.dispatcher.add_handler(PreCheckoutQueryHandler(catch_payment))
         updater.dispatcher.add_handler(
