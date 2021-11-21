@@ -564,7 +564,6 @@ def save_user_attributes(update, context):
 
 
 def make_payment(update, context):
-    print('make_payment')
     price = int(context.user_data["price"]) * 100
     chat_id = update.message.chat_id
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendInvoice"
@@ -580,13 +579,19 @@ def make_payment(update, context):
     }
     response = requests.get(url, params=payload)
     response.raise_for_status()
+
+    reg_buttons = ["Новый заказ", "Мои заказы"]
+    reg_markup = keyboard_maker(reg_buttons, 1)
+    update.message.reply_text(
+        "Оплатите заказ", reply_markup=reg_markup
+    )
     return CATCH_PAYMENT
 
 
 def catch_payment(update, context):
-    print('catch_payment')
     pre_checkout_query_id = update["pre_checkout_query"]["id"]
     context.bot.answer_pre_checkout_query(pre_checkout_query_id, ok=True)
+
     return CREATE_QR
 
 
