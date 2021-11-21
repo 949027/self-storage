@@ -147,7 +147,7 @@ def save_order(context):
         amount=context.user_data["amount"] or None,
         comment="" or None,
         start_date=today,
-        end_date=today,
+        end_date=end_date,
         cost=context.user_data["price"] or 0,
     )
     order.save()
