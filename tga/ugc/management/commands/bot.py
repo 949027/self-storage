@@ -1,3 +1,4 @@
+import qrcode
 import json
 import requests
 import re
@@ -563,6 +564,7 @@ def save_user_attributes(update, context):
 
 
 def make_payment(update, context):
+    print('make_payment')
     price = int(context.user_data["price"]) * 100
     chat_id = update.message.chat_id
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendInvoice"
@@ -578,24 +580,35 @@ def make_payment(update, context):
     }
     response = requests.get(url, params=payload)
     response.raise_for_status()
+    return CATCH_PAYMENT
 
 
 def catch_payment(update, context):
+    print('catch_payment')
     pre_checkout_query_id = update["pre_checkout_query"]["id"]
     context.bot.answer_pre_checkout_query(pre_checkout_query_id, ok=True)
     return CREATE_QR
 
 
-# def create_qr(update, context):
-#     code = random.randint(100000, 999999)
-#     filename = f"{code}.png"
-#     img = qrcode.make(code)
-#     img.save(filename)
-#
-#     chat_id = update.message.chat_id
-#     with open(filename, "rb") as file:
-#         bot.send_photo(chat_id=chat_id,
-#                        photo=open(filename, "rb"))
+def create_qr(update, context):
+    code = random.randint(100000, 999999)
+    filename = f"{code}.png"
+    img = qrcode.make(code)
+    img.save(filename)
+
+    chat_id = update.message.chat_id
+    bot.send_message(
+        chat_id=chat_id, text="Получите Ваш QR-код для доступа к складу!"
+    )
+    with open(filename, "rb") as file:
+        bot.send_photo(chat_id=chat_id,
+                       photo=open(filename, "rb"))
+    os.remove(filename)
+    bot.send_message(
+        chat_id=chat_id, text="Всего Вам хорошего!"
+    )
+
+    #return ???
 
 
 def end(update, context):
@@ -680,14 +693,13 @@ class Command(BaseCommand):
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, make_payment),
                 ],
-                # CREATE_QR: [
-                #     CommandHandler("start", start),
-                #     MessageHandler(Filters.text, create_qr),
-                # ],
             },
             fallbacks=[CommandHandler("end", end)],
         )
 
+        updater.dispatcher.add_handler(
+            MessageHandler(Filters.successful_payment, create_qr)
+        )
         updater.dispatcher.add_handler(conv_handler)
         updater.dispatcher.add_handler(PreCheckoutQueryHandler(catch_payment))
         updater.dispatcher.add_handler(
