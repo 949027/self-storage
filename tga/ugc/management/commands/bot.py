@@ -134,13 +134,16 @@ def save_order(context):
         end_date = today + relativedelta(months=context.user_data["period"])
     elif context.user_data["period_extension"] == "нед.":
         end_date = today + relativedelta(weeks=context.user_data["period"])
+    square_meters = None
+    if "square_meters" in context.user_data:
+        square_meters = context.user_data["square_meters"]
 
     order = Orders(
         customer=context.user_data["customer"],
         warehouse=warehouse,
         seasonal_item=seasonal_item,
         thing_type=context.user_data["choice"],
-        cell_size=context.user_data["square_meters"] or None,
+        cell_size=square_meters,
         amount=context.user_data["amount"] or None,
         comment="" or None,
         start_date=today,
@@ -404,6 +407,7 @@ def check_register_user(update, context):
             chat_id=update.message.chat_id,
             text="Вы уже зарегистрированы в системе:",
         )
+        context.user_data["customer"] = customer[0]
         reg_buttons = ["Далее"]
         reg_markup = keyboard_maker(reg_buttons, 1)
         update.message.reply_text(
@@ -613,7 +617,7 @@ def create_qr(update, context):
     img = qrcode.make(code)
     img.save(filename)
 
-    # save_order(context)
+    save_order(context)
 
     chat_id = update.message.chat_id
     bot.send_message(
