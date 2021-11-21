@@ -49,6 +49,8 @@ from ugc.management.commands.price import (
     get_another_button_prices,
 )
 
+from ugc.management.commands.location import get_distance_buttons
+
 env = Env()
 env.read_env()
 TG_TOKEN = env.str("TG_TOKEN")
@@ -85,7 +87,8 @@ logger = logging.getLogger(__name__)
     CATCH_PAYMENT,
     CREATE_QR,
     USER_FIRST_NAME,
-) = range(18)
+    GET_LOCATION,
+) = range(19)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
@@ -166,6 +169,9 @@ def start(update, context):
         warehouse_buttons.append(warehouse.name)
         warehouse_card = Warehouses.objects.get(name=warehouse.name)
         menu_text += f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
+    location_button = KeyboardButton('Отправить геопозицию',
+                                     request_location=True)
+    warehouse_buttons.append(location_button)
     warehouse_markup = keyboard_maker(warehouse_buttons, 2)
     context.user_data["menu_text"] = menu_text
     context.user_data["warehouse_markup"] = warehouse_markup
@@ -173,6 +179,13 @@ def start(update, context):
         menu_text, reply_markup=warehouse_markup, parse_mode="HTML"
     )
     return WAREHOISES
+
+
+def get_location(bot, update):
+    distance_buttons = get_distance_buttons(bot.message.location)
+    distance_markup = keyboard_maker(distance_buttons, 2)
+    bot.message.reply_text("мы получили ваше местоположение!")
+    bot.message.reply_text("Выберите склад", reply_markup=distance_markup)
 
 
 def warehouses(update, context):
@@ -618,6 +631,7 @@ class Command(BaseCommand):
             states={
                 WAREHOISES: [
                     CommandHandler("start", start),
+                    MessageHandler(Filters.location, get_location),
                     MessageHandler(Filters.text, warehouses),
                 ],
                 CHOICE: [
