@@ -181,20 +181,27 @@ def menu(update, context):
     if user_message == "Заказать хранение":
         warehouses = Warehouses.objects.all()
         warehouse_buttons = []
-        menu_text = ""
+        menu_text = "Наши склады в Москве:\n"
         for warehouse in warehouses:
             warehouse_buttons.append(warehouse.name)
             warehouse_card = Warehouses.objects.get(name=warehouse.name)
             menu_text += f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
         location_button = KeyboardButton(
-            "Отправить геопозицию", request_location=True
+            "Отправить геопозицию",
+            request_location=True
         )
         warehouse_buttons.append(location_button)
         warehouse_markup = keyboard_maker(warehouse_buttons, 2)
         context.user_data["menu_text"] = menu_text
         context.user_data["warehouse_markup"] = warehouse_markup
         update.message.reply_text(
-            menu_text, reply_markup=warehouse_markup, parse_mode="HTML"
+            menu_text,
+            parse_mode="HTML"
+        )
+        update.message.reply_text(
+            'Нажмите <b>"Отправить геопозицию"</b> чтобы выбрать ближайший склад',
+            reply_markup=warehouse_markup,
+            parse_mode="HTML"
         )
         return WAREHOISES
     elif user_message == "Мои заказы":
@@ -208,7 +215,9 @@ def get_location(bot, update):
     distance_buttons = get_distance_buttons(bot.message.location)
     distance_markup = keyboard_maker(distance_buttons, 2)
     bot.message.reply_text("мы получили ваше местоположение!")
-    bot.message.reply_text("Выберите склад", reply_markup=distance_markup)
+    bot.message.reply_text("Выберите склад",
+                           reply_markup=distance_markup
+                           )
 
 
 def warehouses(update, context):
@@ -249,13 +258,15 @@ def choice(update, context):
             "599 руб - первый 1 кв.м., далее +150 руб за каждый кв. метр в месяц"
         )
         update.message.reply_text(
-            "Сколько кв. метров вам нужно?", reply_markup=another_markup
+            "Сколько кв. метров вам нужно?",
+            reply_markup=another_markup
         )
         return ANOTHER
     else:
         choice_markup = keyboard_maker(choice_buttons, 2)
         update.message.reply_text(
-            "Что хотите хранить?", reply_markup=choice_markup
+            "Что хотите хранить?",
+            reply_markup=choice_markup
         )
 
 
@@ -265,7 +276,8 @@ def season(update, context):
     amount_buttons = list(map(str, list(range(1, 6))))
     amount_markup = keyboard_maker(amount_buttons, 5)
     update.message.reply_text(
-        "Выберите или введите кол-во.", reply_markup=amount_markup
+        "Выберите или введите кол-во.",
+        reply_markup=amount_markup
     )
     return AMOUNT
 
@@ -311,7 +323,8 @@ def choice_period(update, context):
         )
         period_markup = keyboard_maker(period_buttons, 1)
         update.message.reply_text(
-            "Укажите сколько недель вам нужно.", reply_markup=period_markup
+            "Укажите сколько недель вам нужно.",
+            reply_markup=period_markup
         )
         return PERIOD
     elif user_message == "Месяцы":
@@ -321,7 +334,8 @@ def choice_period(update, context):
         )
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text(
-            "Укажите сколько месяцев вам нужно.", reply_markup=period_markup
+            "Укажите сколько месяцев вам нужно.",
+            reply_markup=period_markup
         )
         return PERIOD
 
@@ -337,7 +351,8 @@ def another(update, context):
     text = "Мы можем хранить можем сдать ячейку до 12 месяцев"
     update.message.reply_text(text)
     update.message.reply_text(
-        "Сколько месяцев вам нужно?", reply_markup=another_markup
+        "Сколько месяцев вам нужно?",
+        reply_markup=another_markup
     )
     return PERIOD
 
@@ -364,7 +379,10 @@ def get_period(update, context):
         period_extension = context.user_data.get("period_extension")
         amount = context.user_data.get("amount")
         price = get_think_price(
-            seasonal_item, period_extension, period, amount
+            seasonal_item,
+            period_extension,
+            period,
+            amount
         )
         text = f"""Ваш заказ:
                 Склад: {warehouse}
@@ -372,7 +390,9 @@ def get_period(update, context):
                 Количество: {amount} шт.
                 Период: {period} {period_extension}
                 Цена: {int(price)} p."""
-    update.message.reply_text(text, reply_markup=period_markup)
+    update.message.reply_text(text,
+        reply_markup=period_markup
+    )
     context.user_data["price"] = price
     return ORDER
 

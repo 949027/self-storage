@@ -9,6 +9,6 @@ def get_distance_buttons(coordinates):
     for warehouse in warehouses:
         warehouse_coordinates = [warehouse.lat, warehouse.lon]
         warehouse_distance = round(
-            distance.distance(coordinates, warehouse_coordinates[::-1]).km, 1)
+            distance.distance(coordinates, warehouse_coordinates).km, 1)
         warehouse_buttons.append(f"{warehouse.name} {warehouse_distance} km.")
     return warehouse_buttons
