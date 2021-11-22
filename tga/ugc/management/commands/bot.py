@@ -91,6 +91,7 @@ logger = logging.getLogger(__name__)
     CREATE_QR,
     USER_FIRST_NAME,
     GET_LOCATION,
+    ORDERS,
 ) = range(21)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
@@ -98,7 +99,7 @@ choice_buttons = ["Сезонные вещи", "Другое"]
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
-        yield buttons[button: button + chunks_number]
+        yield buttons[button : button + chunks_number]
 
 
 def keyboard_maker(buttons, number):
@@ -171,8 +172,7 @@ def start(update, context):
     if True:  # Здесь нужна проверка на наличие заказов
         start_buttons.append("Мои заказы")
     start_markup = keyboard_maker(start_buttons, 1)
-    update.message.reply_text(
-        text, reply_markup=start_markup)
+    update.message.reply_text(text, reply_markup=start_markup)
     return MENU
 
 
@@ -185,39 +185,39 @@ def menu(update, context):
         for warehouse in warehouses:
             warehouse_buttons.append(warehouse.name)
             warehouse_card = Warehouses.objects.get(name=warehouse.name)
-            menu_text += f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
+            menu_text += (
+                f"<b>{warehouse.name}</b> - {warehouse_card.address}\n"
+            )
         location_button = KeyboardButton(
-            "Отправить геопозицию",
-            request_location=True
+            "Отправить геопозицию", request_location=True
         )
         warehouse_buttons.append(location_button)
         warehouse_markup = keyboard_maker(warehouse_buttons, 2)
         context.user_data["menu_text"] = menu_text
         context.user_data["warehouse_markup"] = warehouse_markup
-        update.message.reply_text(
-            menu_text,
-            parse_mode="HTML"
-        )
+        update.message.reply_text(menu_text, parse_mode="HTML")
         update.message.reply_text(
             'Нажмите <b>"Отправить геопозицию"</b> чтобы выбрать ближайший склад',
             reply_markup=warehouse_markup,
-            parse_mode="HTML"
+            parse_mode="HTML",
         )
         return WAREHOISES
     elif user_message == "Мои заказы":
         menu_buttons = ["Назад"]
         menu_markup = keyboard_maker(menu_buttons, 1)
         update.message.reply_text("Ваши заказы", reply_markup=menu_markup)
-        return START
+        return ORDERS
+
+
+def get_orders(update, context):
+    pass
 
 
 def get_location(bot, update):
     distance_buttons = get_distance_buttons(bot.message.location)
     distance_markup = keyboard_maker(distance_buttons, 2)
     bot.message.reply_text("мы получили ваше местоположение!")
-    bot.message.reply_text("Выберите склад",
-                           reply_markup=distance_markup
-                           )
+    bot.message.reply_text("Выберите склад", reply_markup=distance_markup)
 
 
 def warehouses(update, context):
@@ -258,15 +258,13 @@ def choice(update, context):
             "599 руб - первый 1 кв.м., далее +150 руб за каждый кв. метр в месяц"
         )
         update.message.reply_text(
-            "Сколько кв. метров вам нужно?",
-            reply_markup=another_markup
+            "Сколько кв. метров вам нужно?", reply_markup=another_markup
         )
         return ANOTHER
     else:
         choice_markup = keyboard_maker(choice_buttons, 2)
         update.message.reply_text(
-            "Что хотите хранить?",
-            reply_markup=choice_markup
+            "Что хотите хранить?", reply_markup=choice_markup
         )
 
 
@@ -276,8 +274,7 @@ def season(update, context):
     amount_buttons = list(map(str, list(range(1, 6))))
     amount_markup = keyboard_maker(amount_buttons, 5)
     update.message.reply_text(
-        "Выберите или введите кол-во.",
-        reply_markup=amount_markup
+        "Выберите или введите кол-во.", reply_markup=amount_markup
     )
     return AMOUNT
 
@@ -323,8 +320,7 @@ def choice_period(update, context):
         )
         period_markup = keyboard_maker(period_buttons, 1)
         update.message.reply_text(
-            "Укажите сколько недель вам нужно.",
-            reply_markup=period_markup
+            "Укажите сколько недель вам нужно.", reply_markup=period_markup
         )
         return PERIOD
     elif user_message == "Месяцы":
@@ -334,8 +330,7 @@ def choice_period(update, context):
         )
         period_markup = keyboard_maker(period_buttons, 3)
         update.message.reply_text(
-            "Укажите сколько месяцев вам нужно.",
-            reply_markup=period_markup
+            "Укажите сколько месяцев вам нужно.", reply_markup=period_markup
         )
         return PERIOD
 
@@ -351,8 +346,7 @@ def another(update, context):
     text = "Мы можем хранить можем сдать ячейку до 12 месяцев"
     update.message.reply_text(text)
     update.message.reply_text(
-        "Сколько месяцев вам нужно?",
-        reply_markup=another_markup
+        "Сколько месяцев вам нужно?", reply_markup=another_markup
     )
     return PERIOD
 
@@ -380,10 +374,7 @@ def get_period(update, context):
         period_extension = context.user_data.get("period_extension")
         amount = context.user_data.get("amount")
         price = get_think_price(
-            seasonal_item,
-            period_extension,
-            period,
-            amount
+            seasonal_item, period_extension, period, amount
         )
         text = f"""Ваш заказ:
                 Склад: {warehouse}
@@ -391,13 +382,11 @@ def get_period(update, context):
                 Количество: {amount} шт.
                 Период: {period} {period_extension}
                 Цена: {int(price)} p."""
-    update.message.reply_text(text,
-        reply_markup=period_markup
-    )
+    update.message.reply_text(text, reply_markup=period_markup)
     context.user_data["price"] = price
     bot.send_message(
         chat_id=chat_id,
-        text=f"Введите промокод или перейдите к бронированию нажатием кнопки"
+        text=f"Введите промокод или перейдите к бронированию нажатием кнопки",
     )
     return ORDER
 
@@ -411,43 +400,40 @@ def order(update, context):
         reg_buttons = ["Далее"]
         reg_markup = keyboard_maker(reg_buttons, 1)
         update.message.reply_text(
-            "Приступим к регистрации!",
-            reply_markup=reg_markup
+            "Приступим к регистрации!", reply_markup=reg_markup
         )
         return CHECK_USER
     elif user_message == "Назад":
         menu_buttons = ["Меню"]
         menu_markup = keyboard_maker(menu_buttons, 1)
         update.message.reply_text(
-            "Нажмите меню для возврата",
-            reply_markup=menu_markup
+            "Нажмите меню для возврата", reply_markup=menu_markup
         )
         return START
-    elif user_message.upper() == 'STORAGE20':
-        if period_extension == 'мес.' and period >= 3:
+    elif user_message.upper() == "STORAGE20":
+        if period_extension == "мес." and period >= 3:
             new_price = int(float(context.user_data["price"]) * 0.8)
             context.user_data["price"] = new_price
             bot.send_message(
                 chat_id=chat_id,
-                text=f'Промокод применен! Новая стоимость {new_price} руб.'
+                text=f"Промокод применен! Новая стоимость {new_price} руб.",
             )
         else:
             bot.send_message(
                 chat_id=chat_id,
-                text='Данный промокод не может быть применен '
-                     'для срока хранения менее 3 мес!'
+                text="Данный промокод не может быть применен "
+                "для срока хранения менее 3 мес!",
             )
-    elif user_message.upper() == 'STORAGE15':
+    elif user_message.upper() == "STORAGE15":
         new_price = int(float(context.user_data["price"]) * 0.85)
         context.user_data["price"] = new_price
         bot.send_message(
             chat_id=chat_id,
-            text=f"Промокод применен! Новая стоимость {new_price} руб."
+            text=f"Промокод применен! Новая стоимость {new_price} руб.",
         )
     else:
         bot.send_message(
-            chat_id=chat_id,
-            text=f"Такого промокода не существует!"
+            chat_id=chat_id, text=f"Такого промокода не существует!"
         )
     return ORDER
 
@@ -705,9 +691,11 @@ def create_qr(update, context):
     qr_buttons = ["Меню"]
     qr_markup = keyboard_maker(qr_buttons, 1)
     bot.send_message(chat_id=chat_id, text="Спасибо за ваш заказ!")
-    bot.send_message(chat_id=chat_id,
-                     text="В меню вы сможете посмотреть ваши заказы и сделать новые",
-                     reply_markup=qr_markup)
+    bot.send_message(
+        chat_id=chat_id,
+        text="В меню вы сможете посмотреть ваши заказы и сделать новые",
+        reply_markup=qr_markup,
+    )
     return START
 
 
@@ -729,7 +717,7 @@ class Command(BaseCommand):
         conv_handler = ConversationHandler(
             entry_points=[
                 CommandHandler("start", start),
-                MessageHandler(Filters.text, start)
+                MessageHandler(Filters.text, start),
             ],
             states={
                 START: [
@@ -804,6 +792,10 @@ class Command(BaseCommand):
                 MAKE_PAYMENT: [
                     CommandHandler("start", start),
                     MessageHandler(Filters.text, make_payment),
+                ],
+                ORDERS: [
+                    CommandHandler("start", start),
+                    MessageHandler(Filters.text, get_orders),
                 ],
             },
             fallbacks=[CommandHandler("end", end)],
