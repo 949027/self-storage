@@ -224,11 +224,8 @@ def menu(update, context):
 
 
 def get_orders(update, context):
-    if "customer" not in context.user_data:
-        context.user_data["customer"] = Customers.objects.filter(
-            telegram_id=update.message.chat_id
-        )
-    orders = Orders.objects.filter(customer=context.user_data["customer"][0])
+    customer = Customers.objects.filter(telegram_id=update.message.chat_id)
+    orders = Orders.objects.filter(customer=customer[0])
     for order in orders:
         if order.seasonal_item:
             storage_thing = order.seasonal_item.item_name
