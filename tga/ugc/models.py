@@ -52,7 +52,9 @@ class Customers(models.Model):
     )
 
     def __str__(self):
-        return f"Заказчик {self.telegram_id} {self.first_name} {self.last_name}"
+        return (
+            f"Заказчик {self.telegram_id} {self.first_name} {self.last_name}"
+        )
 
     class Meta:
         verbose_name = "Заказчик"
@@ -195,6 +197,11 @@ class Orders(models.Model):
         max_digits=6,
         decimal_places=2,
         verbose_name="Стоимость заказа",
+    )
+    qrcode = models.ImageField(
+        blank=True,
+        null=True,
+        verbose_name="QR код",
     )
 
     def __str__(self):

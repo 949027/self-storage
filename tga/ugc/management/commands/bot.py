@@ -156,6 +156,7 @@ def save_order(context):
         start_date=today,
         end_date=end_date,
         cost=context.user_data["price"] or 0,
+        qrcode=context.user_data["qrcode"],
     )
     order.save()
 
@@ -715,6 +716,7 @@ def create_qr(update, context):
     filename = f"{code}.png"
     img = qrcode.make(code)
     img.save(filename)
+    context.user_data["qrcode"] = img
 
     save_order(context)
 
