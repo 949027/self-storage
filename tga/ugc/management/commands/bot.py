@@ -537,7 +537,7 @@ def check_user_first_name(update, context):
     else:
         bot = context.bot
         bot.send_message(
-            chat_id=update.callback_query.from_user.id,
+            chat_id=update.message.chat_id,
             text="Всего Вам хорошего!",
         )
         return ConversationHandler.END
