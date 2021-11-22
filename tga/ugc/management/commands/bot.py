@@ -719,7 +719,7 @@ def create_qr(update, context):
     img.save(filename)
     context.user_data["qrcode"] = img
 
-    # save_order(context, filename)
+    save_order(context)
 
     chat_id = update.message.chat_id
     bot.send_message(
@@ -728,7 +728,6 @@ def create_qr(update, context):
     )
     with open(filename, "rb") as file:
         bot.send_photo(chat_id=chat_id, photo=open(filename, "rb"))
-    save_order(context)
     os.remove(filename)
     qr_buttons = ["Меню"]
     qr_markup = keyboard_maker(qr_buttons, 1)
