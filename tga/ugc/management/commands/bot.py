@@ -641,7 +641,7 @@ def make_payment(update, context):
     reg_buttons = ["Новый заказ", "Мои заказы"]
     reg_markup = keyboard_maker(reg_buttons, 1)
     update.message.reply_text("Оплатите заказ", reply_markup=reg_markup)
-    return CATCH_PAYMENT
+    return ConversationHandler.END
 
 
 def catch_payment(update, context):
@@ -692,7 +692,10 @@ class Command(BaseCommand):
         updater = Updater(TG_TOKEN, use_context=True)
 
         conv_handler = ConversationHandler(
-            entry_points=[CommandHandler("start", start)],
+            entry_points=[
+                CommandHandler("start", start),
+                MessageHandler(Filters.text, start)
+            ],
             states={
                 START: [
                     CommandHandler("start", start),
