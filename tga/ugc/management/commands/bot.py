@@ -358,6 +358,7 @@ def another(update, context):
 
 
 def get_period(update, context):
+    chat_id = update.message.chat_id
     user_message = update.message.text
     period = int(user_message.split()[0])
     context.user_data["period"] = period
@@ -394,11 +395,18 @@ def get_period(update, context):
         reply_markup=period_markup
     )
     context.user_data["price"] = price
+    bot.send_message(
+        chat_id=chat_id,
+        text=f"Введите промокод или перейдите к бронированию нажатием кнопки"
+    )
     return ORDER
 
 
 def order(update, context):
+    chat_id = update.message.chat_id
     user_message = update.message.text
+    period = int(context.user_data["period"])
+    period_extension = context.user_data.get("period_extension")
     if user_message == "Забронировать":
         reg_buttons = ["Далее"]
         reg_markup = keyboard_maker(reg_buttons, 1)
@@ -415,6 +423,33 @@ def order(update, context):
             reply_markup=menu_markup
         )
         return START
+    elif user_message.upper() == 'STORAGE20':
+        if period_extension == 'мес.' and period >= 3:
+            new_price = int(float(context.user_data["price"]) * 0.8)
+            context.user_data["price"] = new_price
+            bot.send_message(
+                chat_id=chat_id,
+                text=f'Промокод применен! Новая стоимость {new_price} руб.'
+            )
+        else:
+            bot.send_message(
+                chat_id=chat_id,
+                text='Данный промокод не может быть применен '
+                     'для срока хранения менее 3 мес!'
+            )
+    elif user_message.upper() == 'STORAGE15':
+        new_price = int(float(context.user_data["price"]) * 0.85)
+        context.user_data["price"] = new_price
+        bot.send_message(
+            chat_id=chat_id,
+            text=f"Промокод применен! Новая стоимость {new_price} руб."
+        )
+    else:
+        bot.send_message(
+            chat_id=chat_id,
+            text=f"Такого промокода не существует!"
+        )
+    return ORDER
 
 
 def check_register_user(update, context):
