@@ -210,7 +210,29 @@ def menu(update, context):
 
 
 def get_orders(update, context):
-    pass
+    orders = Orders.objects.filter(customer=context.user_data["customer"])
+    for order in orders:
+        if order.seasonal_item:
+            storage_thing = order.seasonal_item.iten_name
+            gabarites = "не применяется"
+            amount = order.amount
+        else:
+            storage_thing = "Другое"
+            gabarites = order.cell_size
+            amount = "не применяется"
+        message_text = (
+            f"Заказ № {order.id}"
+            f"Склад: {order.warehouse.name}"
+            f"Что хранится: {storage_thing}"
+            f"Габаритность ячейки: {gabarites}"
+            f"Количество вещей: {amount}"
+            f"Дата бронирования с: {order.start_date}"
+            f"Дата бронирования по: {order.end_date}"
+            f"Стоимость заказ: {order.cost} руб."
+            "\n"
+        )
+        bot.message.reply_text("message_text")
+        return MENU
 
 
 def get_location(bot, update):
