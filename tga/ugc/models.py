@@ -201,6 +201,7 @@ class Orders(models.Model):
     qrcode = models.ImageField(
         blank=True,
         null=True,
+        upload_to="qrs",
         verbose_name="QR код",
     )
 
