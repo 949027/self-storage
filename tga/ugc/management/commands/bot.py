@@ -171,8 +171,8 @@ def start(update, context):
     start_buttons = ["Заказать хранение"]
     customer = Customers.objects.filter(telegram_id=update.message.chat_id)
     context.user_data["customer"] = customer
-    orders_count = Orders.objects.filter(customer=customer[0]).count()
-    if orders_count > 0:  # Здесь нужна проверка на наличие заказов
+    # orders_count = Orders.objects.filter(customer=customer).count()
+    if True:  # Здесь нужна проверка на наличие заказов
         start_buttons.append("Мои заказы")
     start_markup = keyboard_maker(start_buttons, 1)
     update.message.reply_text(text, reply_markup=start_markup)
