@@ -141,13 +141,17 @@ def save_order(context):
     if "square_meters" in context.user_data:
         square_meters = context.user_data["square_meters"]
 
+    amount = None
+    if "amount" in context.user_data:
+        amount = context.user_data["amount"]
+
     order = Orders(
         customer=context.user_data["customer"],
         warehouse=warehouse,
         seasonal_item=seasonal_item,
         thing_type=context.user_data["choice"],
         cell_size=square_meters,
-        amount=context.user_data["amount"] or None,
+        amount=amount,
         comment="" or None,
         start_date=today,
         end_date=end_date,
