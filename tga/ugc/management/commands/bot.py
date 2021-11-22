@@ -124,7 +124,7 @@ def save_customer(context):
     return customer
 
 
-def save_order(context):
+def save_order(context, filename):
     warehouse_name = context.user_data["warehouse"]
     warehouse = Warehouses.objects.get(name=warehouse_name)
     seasonal_item = None
@@ -156,8 +156,9 @@ def save_order(context):
         start_date=today,
         end_date=end_date,
         cost=context.user_data["price"] or 0,
-        qrcode=context.user_data["qrcode"],
+        qrcode=filename,
     )
+
     order.save()
 
 
@@ -718,7 +719,7 @@ def create_qr(update, context):
     img.save(filename)
     context.user_data["qrcode"] = img
 
-    save_order(context)
+    # save_order(context, filename)
 
     chat_id = update.message.chat_id
     bot.send_message(
@@ -727,6 +728,7 @@ def create_qr(update, context):
     )
     with open(filename, "rb") as file:
         bot.send_photo(chat_id=chat_id, photo=open(filename, "rb"))
+    save_order(context, filename)
     os.remove(filename)
     qr_buttons = ["Меню"]
     qr_markup = keyboard_maker(qr_buttons, 1)
