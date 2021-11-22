@@ -228,7 +228,7 @@ def get_orders(update, context):
         context.user_data["customer"] = Customers.objects.filter(
             telegram_id=update.message.chat_id
         )
-    orders = Orders.objects.filter(customer=context.user_data["customer"][0])
+    orders = Orders.objects.filter(customer=context.user_data["customer"])
     for order in orders:
         if order.seasonal_item:
             storage_thing = order.seasonal_item.item_name
