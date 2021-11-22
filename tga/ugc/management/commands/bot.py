@@ -92,7 +92,7 @@ logger = logging.getLogger(__name__)
     USER_FIRST_NAME,
     GET_LOCATION,
     ORDERS,
-) = range(21)
+) = range(22)
 
 choice_buttons = ["Сезонные вещи", "Другое"]
 
@@ -169,7 +169,10 @@ def start(update, context):
         parse_mode="HTML",
     )
     start_buttons = ["Заказать хранение"]
-    if True:  # Здесь нужна проверка на наличие заказов
+    customer = Customers.objects.filter(telegram_id=update.message.chat_id)
+    context.user_data["customer"] = customer
+    orders_count = Orders.objects.filter(customer=customer[0]).count()
+    if orders_count > 0:  # Здесь нужна проверка на наличие заказов
         start_buttons.append("Мои заказы")
     start_markup = keyboard_maker(start_buttons, 1)
     update.message.reply_text(text, reply_markup=start_markup)
@@ -203,36 +206,45 @@ def menu(update, context):
         )
         return WAREHOISES
     elif user_message == "Мои заказы":
+        get_orders(update, context)
         menu_buttons = ["Назад"]
         menu_markup = keyboard_maker(menu_buttons, 1)
-        update.message.reply_text("Ваши заказы", reply_markup=menu_markup)
-        return ORDERS
+        update.message.reply_text(
+            "Вернуться в первоначальное меню - нажмите кнопку ниже",
+            reply_markup=menu_markup,
+        )
+        return START
 
 
 def get_orders(update, context):
-    orders = Orders.objects.filter(customer=context.user_data["customer"])
+    if "customer" not in context.user_data:
+        context.user_data["customer"] = Customers.objects.filter(
+            telegram_id=update.message.chat_id
+        )
+    orders = Orders.objects.filter(customer=context.user_data["customer"][0])
     for order in orders:
         if order.seasonal_item:
-            storage_thing = order.seasonal_item.iten_name
+            storage_thing = order.seasonal_item.item_name
             gabarites = "не применяется"
             amount = order.amount
         else:
             storage_thing = "Другое"
             gabarites = order.cell_size
             amount = "не применяется"
+        start_date = order.start_date.strftime("%d.%m.%Y")
+        end_date = order.end_date.strftime("%d.%m.%Y")
         message_text = (
-            f"Заказ № {order.id}"
-            f"Склад: {order.warehouse.name}"
-            f"Что хранится: {storage_thing}"
-            f"Габаритность ячейки: {gabarites}"
-            f"Количество вещей: {amount}"
-            f"Дата бронирования с: {order.start_date}"
-            f"Дата бронирования по: {order.end_date}"
+            f"Заказ № {order.id}\n"
+            f"Склад: {order.warehouse.name}\n"
+            f"Адрес склада: {order.warehouse.address}\n"
+            f"Что хранится: {storage_thing}\n"
+            f"Габаритность ячейки: {gabarites}\n"
+            f"Количество вещей: {amount}\n"
+            f"Дата бронирования с: {start_date}\n"
+            f"Дата бронирования по: {end_date}\n"
             f"Стоимость заказ: {order.cost} руб."
-            "\n"
         )
-        bot.message.reply_text("message_text")
-        return MENU
+        update.message.reply_text(message_text)
 
 
 def get_location(bot, update):
@@ -831,6 +843,9 @@ class Command(BaseCommand):
         updater.dispatcher.add_handler(
             MessageHandler(Filters.contact, get_contact)
         )
+
+        updater.start_polling()
+        updater.idle()
 
         updater.start_polling()
         updater.idle()
