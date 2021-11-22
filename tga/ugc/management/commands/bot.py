@@ -16,6 +16,7 @@ from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.files import File
 
 # from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 from telegram import Bot
@@ -124,7 +125,7 @@ def save_customer(context):
     return customer
 
 
-def save_order(context, filename):
+def save_order(context):
     warehouse_name = context.user_data["warehouse"]
     warehouse = Warehouses.objects.get(name=warehouse_name)
     seasonal_item = None
@@ -156,7 +157,6 @@ def save_order(context, filename):
         start_date=today,
         end_date=end_date,
         cost=context.user_data["price"] or 0,
-        qrcode=filename,
     )
 
     order.save()
@@ -728,7 +728,7 @@ def create_qr(update, context):
     )
     with open(filename, "rb") as file:
         bot.send_photo(chat_id=chat_id, photo=open(filename, "rb"))
-    save_order(context, filename)
+    save_order(context)
     os.remove(filename)
     qr_buttons = ["Меню"]
     qr_markup = keyboard_maker(qr_buttons, 1)

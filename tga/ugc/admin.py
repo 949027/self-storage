@@ -79,6 +79,7 @@ class OrdersAdmin(admin.ModelAdmin):
         "start_date",
         "end_date",
         "cost",
+        "qrcode",
     )
     list_edit = (
         "thing_type",
