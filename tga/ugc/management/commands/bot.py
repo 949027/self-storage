@@ -224,11 +224,8 @@ def menu(update, context):
 
 
 def get_orders(update, context):
-    if "customer" not in context.user_data:
-        context.user_data["customer"] = Customers.objects.filter(
-            telegram_id=update.message.chat_id
-        )
-    orders = Orders.objects.filter(customer=context.user_data["customer"][0])
+    customer = Customers.objects.filter(telegram_id=update.message.chat_id)
+    orders = Orders.objects.filter(customer=customer[0])
     for order in orders:
         if order.seasonal_item:
             storage_thing = order.seasonal_item.item_name
@@ -540,7 +537,7 @@ def check_user_first_name(update, context):
     else:
         bot = context.bot
         bot.send_message(
-            chat_id=update.callback_query.from_user.id,
+            chat_id=update.message.chat_id,
             text="Всего Вам хорошего!",
         )
         return ConversationHandler.END
