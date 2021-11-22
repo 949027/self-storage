@@ -262,7 +262,7 @@ def get_location(bot, update):
 
 
 def warehouses(update, context):
-    user_message = update.message.text
+    user_message = update.message.text.split()[0]
     context.user_data["warehouse"] = user_message
     choice_markup = keyboard_maker(choice_buttons, 2)
     update.message.reply_text(
