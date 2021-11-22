@@ -128,7 +128,7 @@ def save_order(context):
     warehouse_name = context.user_data["warehouse"]
     warehouse = Warehouses.objects.get(name=warehouse_name)
     seasonal_item = None
-    if context.user_data["seasonal_item"]:
+    if "seasonal_item" in context.user_data:
         seasonal_item = SeasonalItems.objects.get(
             item_name=context.user_data["seasonal_item"]
         )
@@ -288,7 +288,8 @@ def choice(update, context):
         update.message.reply_text("Выберете вещи.", reply_markup=things_markup)
         return SEASON
     elif user_message == "Другое":
-        another_buttons = list(map(str, list(range(1, 6))))#list(range(1, 11))
+        # list(range(1, 11))
+        another_buttons = list(map(str, list(range(1, 6))))
         another_markup = keyboard_maker(another_buttons, 5)
         update.message.reply_text("Выберите габариты ячейки")
         update.message.reply_text(
