@@ -288,7 +288,7 @@ def choice(update, context):
         update.message.reply_text("Выберете вещи.", reply_markup=things_markup)
         return SEASON
     elif user_message == "Другое":
-        another_buttons = list(map(str, list(range(1, 6))))#list(range(1, 11))
+        another_buttons = list(map(str, list(range(1, 11))))#list(range(1, 11))
         another_markup = keyboard_maker(another_buttons, 5)
         update.message.reply_text("Выберите габариты ячейки")
         update.message.reply_text(
